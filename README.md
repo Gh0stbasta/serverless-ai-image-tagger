@@ -23,7 +23,7 @@ This project explores modern software engineering by treating AI not just as a t
 
 | Role | Agent / Human | Responsibilities |
 | :--- | :--- | :--- |
-| **Lead Architect & PO** | **[Dein Name]** (Human) | Architecture Design, Security Decisions, Code Review, Prompt Engineering, Business Logic Definition. |
+| **Lead Architect & PO** | **Stefan Schmidpeter** (Human) | Architecture Design, Security Decisions, Code Review, Prompt Engineering, Business Logic Definition. |
 | **Strategic Advisor** | **Gemini (Google)** | Requirements Engineering (WBS), FinOps Analysis, Roadmap Planning, "Challenger" for Architectural Decisions. |
 | **Implementation Partner** | **GitHub Copilot** | Writing Boilerplate Code, Unit Test Scaffolding, Syntax Generation (AWS CDK & React). |
 
