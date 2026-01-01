@@ -1,0 +1,25 @@
+{
+    "image": "mcr.microsoft.com/devcontainers/universal:2",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "PKief.material-icon-theme",
+                "GitHub.copilot",
+                "GitHub.copilot-chat",
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "ms-python.debugpy",
+                "esbenp.prettier-vscode",
+                "rvest.vs-code-prettier-eslint",
+                "dbaeumer.vscode-eslint",
+                "ms-vscode.live-server",
+                "leizongmin.node-module-intellisense",
+                "qwtel.sqlite-viewer"
+            ],
+            "settings": {
+                "workbench.iconTheme": "material-icon-theme",
+                "workbench.colorTheme": "Default Dark Modern"
+            }
+        }
+    }
+}
