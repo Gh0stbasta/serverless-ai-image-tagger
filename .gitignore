@@ -32,8 +32,6 @@ ENV/
 pip-log.txt
 pip-delete-this-directory.txt
 *.egg-info/
-dist/
-build/
 
 # Testing and Coverage
 coverage/
@@ -51,7 +49,6 @@ htmlcov/
 *.swp
 *.swo
 *~
-.DS_Store
 
 # Environment variables
 .env
