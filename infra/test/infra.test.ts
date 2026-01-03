@@ -21,7 +21,7 @@ test('Global FinOps tags are applied to resources', () => {
   
   // Apply the same global tags as in bin/infra.ts
   Tags.of(app).add('Project', 'Serverless-AI-Tagger');
-  Tags.of(app).add('Owner', 'YourName');
+  Tags.of(app).add('Owner', 'Gh0stbasta');
   
   // WHEN
   const template = Template.fromStack(stack);
