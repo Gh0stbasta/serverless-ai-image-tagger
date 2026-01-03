@@ -27,4 +27,4 @@ new InfraStack(app, 'InfraStack', {
  * across all stacks and resources without manual tagging on each resource.
  */
 Tags.of(app).add('Project', 'Serverless-AI-Tagger');
-Tags.of(app).add('Owner', 'YourName');
+Tags.of(app).add('Owner', 'Gh0stbasta');
