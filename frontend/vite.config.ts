@@ -7,5 +7,11 @@ export default defineConfig({
   server: {
     host: true, //necessary to get hold of the container workspace
     port: 5173,
+    watch: {
+      usePolling: true,
+    },
+    hmr: {
+      clientPort: 5173,
+    },
   },
 });
