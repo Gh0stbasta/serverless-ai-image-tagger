@@ -29,7 +29,7 @@ test('Global FinOps tags are applied to resources', () => {
   // THEN - Verify that the S3 bucket has the required tags
   template.hasResourceProperties('AWS::S3::Bucket', {
     Tags: [
-      { Key: 'Owner', Value: 'YourName' },
+      { Key: 'Owner', Value: 'Gh0stbasta' },
       { Key: 'Project', Value: 'Serverless-AI-Tagger' },
     ],
   });
