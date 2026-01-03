@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import * as cdk from 'aws-cdk-lib/core';
+import { Tags } from 'aws-cdk-lib/core';
 import { InfraStack } from '../lib/infra-stack';
 
 const app = new cdk.App();
@@ -18,3 +19,12 @@ new InfraStack(app, 'InfraStack', {
 
   /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
 });
+
+/**
+ * Apply global FinOps tags for cost allocation and tracking.
+ * These tags are automatically propagated to all resources within the app.
+ * Architectural Decision: Using Tags.of(app) ensures consistent tagging
+ * across all stacks and resources without manual tagging on each resource.
+ */
+Tags.of(app).add('Project', 'Serverless-AI-Tagger');
+Tags.of(app).add('Owner', 'YourName');
