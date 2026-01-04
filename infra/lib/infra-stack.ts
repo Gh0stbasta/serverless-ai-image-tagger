@@ -22,7 +22,9 @@ export class InfraStack extends cdk.Stack {
       /**
        * Thumbprint for GitHub's OIDC provider.
        * This is a well-known, stable value provided by GitHub.
+       * Verified: January 2026
        * See: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services
+       * Note: GitHub maintains this thumbprint and notifies of changes. Periodic verification recommended.
        */
       thumbprints: ['6938fd4d98bab03faadb97b34396831e3780aea1'],
     });
