@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import * as cdk from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
 import * as iam from 'aws-cdk-lib/aws-iam';
@@ -17,7 +16,7 @@ export class InfraStack extends cdk.Stack {
      * This allows GitHub Actions workflows to assume AWS IAM roles without
      * storing static credentials, following AWS security best practices.
      */
-    new iam.OpenIdConnectProvider(this, 'GitHubOidcProvider', {
+    const githubOidcProvider = new iam.OpenIdConnectProvider(this, 'GitHubOidcProvider', {
       url: 'https://token.actions.githubusercontent.com',
       clientIds: ['sts.amazonaws.com'],
       /**
@@ -29,23 +28,53 @@ export class InfraStack extends cdk.Stack {
        */
       thumbprints: ['6938fd4d98bab03faadb97b34396831e3780aea1'],
     });
+
+    /**
+     * IAM Role for GitHub Actions to deploy CDK stack.
+     * Architectural Decision: The role uses a trust policy that restricts access
+     * to only this specific GitHub repository using OIDC federation.
+     * This ensures that only workflows from 'Gh0stbasta/serverless-ai-image-tagger'
+     * can assume this role, following the principle of least privilege.
+     * 
+     * The StringLike condition with wildcard allows any branch/tag in the repo
+     * while still preventing access from other repositories or GitHub accounts.
+     */
+    const githubDeployRole = new iam.Role(this, 'GitHubDeployRole', {
+      roleName: 'GitHubActionsDeployRole',
+      description: 'IAM Role for GitHub Actions to deploy the serverless-ai-image-tagger CDK stack',
+      assumedBy: new iam.WebIdentityPrincipal(
+        githubOidcProvider.openIdConnectProviderArn,
+        {
+          StringLike: {
+            'token.actions.githubusercontent.com:sub': 'repo:Gh0stbasta/serverless-ai-image-tagger:*',
+          },
+          StringEquals: {
+            'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com',
+          },
+        }
+      ),
+      /**
+       * Using AdministratorAccess for initial setup.
+       * TODO: In production, replace with granular CDK deployment permissions:
+       * - cloudformation:*
+       * - iam:PassRole (scoped to CDK execution role)
+       * - s3:* (scoped to CDK staging bucket)
+       * - lambda:*, dynamodb:*, rekognition:*, etc. (based on stack resources)
+       * 
+       * Rationale: AdministratorAccess allows rapid prototyping and ensures
+       * CDK can create/modify any resource during development phase.
+       * This should be refined before production deployment.
+       */
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('AdministratorAccess'),
+      ],
+    });
+
+    // Output the role ARN for use in GitHub Actions workflow configuration
+    new cdk.CfnOutput(this, 'GitHubDeployRoleArn', {
+      value: githubDeployRole.roleArn,
+      description: 'ARN of the IAM role for GitHub Actions deployment',
+      exportName: 'GitHubActionsDeployRoleArn',
+    });
   }
 }
-=======
-import * as cdk from 'aws-cdk-lib/core';
-import { Construct } from 'constructs';
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
-
-export class InfraStack extends cdk.Stack {
-  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
-    super(scope, id, props);
-
-    // The code that defines your stack goes here
-
-    // example resource
-    // const queue = new sqs.Queue(this, 'InfraQueue', {
-    //   visibilityTimeout: cdk.Duration.seconds(300)
-    // });
-  }
-}
->>>>>>> 804abc2 (setup ho 2)
