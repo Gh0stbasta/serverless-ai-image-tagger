@@ -34,3 +34,26 @@ test('Global FinOps tags are applied to resources', () => {
     ],
   });
 });
+
+/**
+ * Test to verify GitHub OIDC Provider is created with correct configuration.
+ * This ensures secure deployment from GitHub Actions without long-lived credentials.
+ * 
+ * Note: CDK creates OIDC providers using a custom resource (Custom::AWSCDKOpenIdConnectProvider)
+ * which then provisions the actual AWS::IAM::OIDCProvider in the account.
+ */
+test('GitHub OIDC Provider is created with correct configuration', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify OIDC Provider custom resource exists with correct properties
+  template.hasResourceProperties('Custom::AWSCDKOpenIdConnectProvider', {
+    Url: 'https://token.actions.githubusercontent.com',
+    ClientIDList: ['sts.amazonaws.com'],
+    ThumbprintList: ['6938fd4d98bab03faadb97b34396831e3780aea1'],
+  });
+});
