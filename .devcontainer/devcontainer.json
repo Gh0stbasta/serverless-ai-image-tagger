@@ -1,28 +1,37 @@
 {
-    "image": "mcr.microsoft.com/devcontainers/universal:2",
-    "features": {
-        "ghcr.io/devcontainers/features/aws-cli:1": {}
+  "name": "Serverless AI Tagger (Lightweight)",
+  // Optimized base image (Node.js only) to significantly reduce container size and improve startup performance.
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:20-bullseye",
+  
+  "features": {
+    // Installs the AWS Command Line Interface for infrastructure management.
+    "ghcr.io/devcontainers/features/aws-cli:1": {},
+    // Adds Python runtime environment, required for Lambda function development.
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11"
     },
-    "customizations": {
-        "vscode": {
-            "extensions": [
-                "PKief.material-icon-theme",
-                "GitHub.copilot",
-                "GitHub.copilot-chat",
-                "ms-python.python",
-                "ms-python.vscode-pylance",
-                "ms-python.debugpy",
-                "esbenp.prettier-vscode",
-                "rvest.vs-code-prettier-eslint",
-                "dbaeumer.vscode-eslint",
-                "ms-vscode.live-server",
-                "leizongmin.node-module-intellisense",
-                "qwtel.sqlite-viewer"
-            ],
-            "settings": {
-                "workbench.iconTheme": "material-icon-theme",
-                "workbench.colorTheme": "Default Dark Modern"
-            }
-        }
+    // Enables Docker-in-Docker to allow building containerized Lambda layers or Docker images within the codespace.
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "PKief.material-icon-theme",
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "ms-python.python",       // Core extension for Python language support.
+        "ms-python.vscode-pylance"
+      ],
+      "settings": {
+        "workbench.iconTheme": "material-icon-theme",
+        "workbench.colorTheme": "Default Dark Modern"
+      }
     }
+  },
+
+  // Post-creation lifecycle hook: Installs global CDK CLI and resolves dependencies for both infrastructure and frontend projects.
+  "postCreateCommand": "npm install -g aws-cdk && cd infra && npm install && cd ../frontend && npm install"
 }
