@@ -15,6 +15,7 @@ function App() {
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [uploadSuccess, setUploadSuccess] = useState(false)
+  const [galleryKey, setGalleryKey] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   /**
@@ -60,6 +61,10 @@ function App() {
       // Show success message to user
       setUploadSuccess(true)
       setTimeout(() => setUploadSuccess(false), 3000)
+      
+      // Trigger gallery refresh by updating the key
+      // This will cause the Gallery component to remount and fetch fresh data
+      setGalleryKey(prev => prev + 1)
       
       // Reset file input to allow uploading the same file again
       if (fileInputRef.current) {
@@ -108,7 +113,7 @@ function App() {
           {uploadSuccess && <p className="success-message">Upload successful! Processing image...</p>}
         </section>
 
-        <Gallery apiUrl={apiUrl} />
+        <Gallery key={galleryKey} apiUrl={apiUrl} />
       </main>
     </div>
   )

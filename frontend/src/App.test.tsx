@@ -416,6 +416,66 @@ describe('App Component', () => {
       })
     })
 
+    it('refreshes gallery after successful upload', async () => {
+      // Mock /images endpoint for initial Gallery fetch (empty)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
+      // Mock presigned URL response
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          uploadUrl: 'https://s3.amazonaws.com/test-bucket/test-key',
+          key: 'uploads/test-key.jpg',
+          expiresIn: 300,
+        }),
+      })
+      
+      // Mock S3 upload
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+      })
+
+      // Mock /images endpoint for Gallery refresh (with new image)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [
+          {
+            imageId: 'uploads/test-key.jpg',
+            s3Url: 'https://bucket.s3.amazonaws.com/uploads/test-key.jpg',
+            labels: [{ name: 'Test', confidence: 95 }],
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      })
+
+      const { container } = render(<App />)
+      
+      // Wait for initial Gallery fetch (should show 0 images)
+      await waitFor(() => {
+        expect(screen.getByText(/Your Images \(0\)/i)).toBeInTheDocument()
+      })
+
+      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+      const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
+      
+      fireEvent.change(fileInput, { target: { files: [file] } })
+      
+      // Wait for gallery to refresh and show 1 image
+      await waitFor(() => {
+        expect(screen.getByText(/Your Images \(1\)/i)).toBeInTheDocument()
+      })
+
+      // Verify fetch was called 4 times:
+      // 1. Initial gallery fetch
+      // 2. Presigned URL
+      // 3. S3 upload
+      // 4. Gallery refresh
+      expect(mockFetch).toHaveBeenCalledTimes(4)
+    })
+
     it('uses correct API URL from environment variable', async () => {
       // Set environment variable
       import.meta.env.VITE_API_URL = 'https://api.example.com'
