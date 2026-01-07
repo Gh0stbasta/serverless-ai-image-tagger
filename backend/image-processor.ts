@@ -146,10 +146,11 @@ export const handler = async (event: S3Event, context: Context): Promise<void> =
       const tableName = process.env.TABLE_NAME;
       if (!tableName) {
         console.error('TABLE_NAME environment variable is not set');
-        throw new Error('TABLE_NAME environment variable is required');
+        throw new Error('TABLE_NAME environment variable is not set');
       }
 
-      const s3Url = `https://${bucket}.s3.amazonaws.com/${encodeURIComponent(key)}`;
+      const region = process.env.AWS_REGION || 'us-east-1';
+      const s3Url = `https://${bucket}.s3.${region}.amazonaws.com/${encodeURIComponent(key)}`;
       const labels = response.Labels?.map((label) => ({
         name: label.Name || 'Unknown',
         confidence: label.Confidence ? parseFloat(label.Confidence.toFixed(2)) : 0,
