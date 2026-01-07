@@ -187,3 +187,67 @@ test('ImageProcessor Lambda Function has FinOps tags applied', () => {
     ]),
   });
 });
+
+/**
+ * Test to verify S3 bucket notification is configured to trigger Lambda on object creation.
+ * Architectural Decision: This test ensures the event-driven architecture is properly configured.
+ * When an image is uploaded to S3, the ObjectCreated event should automatically trigger the
+ * ImageProcessor Lambda function, eliminating polling and reducing latency.
+ */
+test('S3 bucket notification triggers ImageProcessor Lambda on object creation', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify bucket notification configuration exists
+  // CDK creates a Custom Resource to manage S3 bucket notifications
+  template.hasResourceProperties('Custom::S3BucketNotifications', {
+    NotificationConfiguration: {
+      LambdaFunctionConfigurations: Match.arrayWith([
+        Match.objectLike({
+          Events: ['s3:ObjectCreated:*'],
+          LambdaFunctionArn: Match.objectLike({
+            'Fn::GetAtt': Match.arrayWith([
+              Match.stringLikeRegexp('ImageProcessorFunction'),
+            ]),
+          }),
+        }),
+      ]),
+    },
+  });
+});
+
+/**
+ * Test to verify Lambda has permission to be invoked by S3.
+ * Architectural Decision: S3 needs explicit permission to invoke the Lambda function.
+ * CDK automatically creates a resource-based policy on the Lambda function granting
+ * S3 the lambda:InvokeFunction permission. This is essential for the event-driven flow.
+ */
+test('ImageProcessor Lambda has permission to be invoked by S3', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify Lambda permission for S3 invocation exists
+  template.hasResourceProperties('AWS::Lambda::Permission', {
+    Action: 'lambda:InvokeFunction',
+    Principal: 's3.amazonaws.com',
+    FunctionName: Match.objectLike({
+      'Fn::GetAtt': Match.arrayWith([
+        Match.stringLikeRegexp('ImageProcessorFunction'),
+      ]),
+    }),
+    SourceArn: Match.objectLike({
+      'Fn::GetAtt': Match.arrayWith([
+        Match.stringLikeRegexp('UploadBucket'),
+      ]),
+    }),
+  });
+});
+

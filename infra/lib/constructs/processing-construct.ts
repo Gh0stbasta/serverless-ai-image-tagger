@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as path from 'path';
@@ -45,6 +46,11 @@ export interface ProcessingProps {
  * 
  * The construct accepts bucket and table references as props, enabling dependency
  * injection and loose coupling between infrastructure components.
+ * 
+ * Responsibilities:
+ * - Creates and configures the ImageProcessor Lambda function
+ * - Grants IAM permissions for S3 read and DynamoDB write access
+ * - Wires the Lambda to S3 event notifications for automatic triggering on image uploads
  */
 export class ProcessingConstruct extends Construct {
   /**
@@ -77,9 +83,10 @@ export class ProcessingConstruct extends Construct {
      * - Bundling: esbuild with minification and source maps for efficient cold starts and debugging.
      * 
      * Security:
-     * - Uses the base lambdaExecutionRole which provides only CloudWatch Logs permissions.
-     * - Additional permissions (S3 read, DynamoDB write, Rekognition access) will be added
-     *   in future iterations using least-privilege IAM policies.
+     * - Uses the base lambdaExecutionRole which provides CloudWatch Logs permissions.
+     * - Additional permissions (S3 read, DynamoDB write) are granted after function creation
+     *   using CDK's grant methods to implement least-privilege IAM policies.
+     * - Rekognition access will be added in a future iteration when AI processing is implemented.
      * 
      * Environment Variables:
      * - TABLE_NAME: DynamoDB table name for storing image metadata. Using table.tableName
@@ -122,5 +129,52 @@ export class ProcessingConstruct extends Construct {
         forceDockerBundling: false,
       },
     });
+
+    /**
+     * IAM Permissions: Grant Lambda access to S3 and DynamoDB.
+     * Architectural Decision: Using CDK's grant methods to implement least-privilege access.
+     * These methods automatically create scoped IAM policies that grant only the necessary
+     * permissions for the Lambda function to operate.
+     * 
+     * - grantRead: Allows Lambda to read objects from the S3 bucket (s3:GetObject, s3:ListBucket)
+     *   This is required to download uploaded images for processing.
+     * 
+     * - grantWriteData: Allows Lambda to write items to the DynamoDB table (dynamodb:PutItem, 
+     *   dynamodb:UpdateItem, dynamodb:DeleteItem). This is required to store image metadata 
+     *   and AI-generated labels.
+     * 
+     * Cost Impact: No additional costs for IAM permissions. These are necessary for the Lambda
+     * to function and follow AWS security best practices by granting only the minimum required
+     * permissions rather than using wildcard (*) permissions.
+     */
+    props.bucket.grantRead(this.imageProcessorFunction);
+    props.table.grantWriteData(this.imageProcessorFunction);
+
+    /**
+     * S3 Event Notification: Wire Lambda to S3 bucket events.
+     * Architectural Decision: The ProcessingConstruct is responsible for wiring itself to its
+     * event sources, following ADR-005's principle of encapsulation. Since this construct
+     * receives the bucket as a dependency, it should configure how it responds to bucket events.
+     * 
+     * Event Filter: s3:ObjectCreated:* captures all object creation events including:
+     * - s3:ObjectCreated:Put (standard uploads)
+     * - s3:ObjectCreated:Post (form-based uploads)
+     * - s3:ObjectCreated:Copy (object copies)
+     * - s3:ObjectCreated:CompleteMultipartUpload (large file uploads)
+     * 
+     * This ensures the Lambda is triggered regardless of how the image is uploaded,
+     * providing a robust event-driven integration.
+     * 
+     * Cost Impact: S3 event notifications are free. This design choice replaces the need
+     * for polling mechanisms (which would require a scheduled Lambda and incur costs) with
+     * a reactive, zero-cost notification system.
+     * 
+     * Permissions: CDK automatically grants the S3 bucket permission to invoke the Lambda
+     * function by adding the necessary resource-based policy to the Lambda function.
+     */
+    props.bucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3n.LambdaDestination(this.imageProcessorFunction)
+    );
   }
 }

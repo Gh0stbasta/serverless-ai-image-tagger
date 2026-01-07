@@ -152,6 +152,14 @@ export class InfraStack extends cdk.Stack {
      * configuration following ADR-005. Dependencies are injected through props,
      * enabling loose coupling and testability.
      * 
+     * The ProcessingConstruct now handles all processing-related concerns including:
+     * - Lambda function configuration
+     * - IAM permissions for S3 read and DynamoDB write
+     * - S3 event notification to trigger the Lambda on image uploads
+     * 
+     * This follows the Single Responsibility Principle by keeping all processing
+     * logic encapsulated within the ProcessingConstruct.
+     * 
      * Note: Using 'ImageProcessor' as the construct ID with 'Function' as the resource ID
      * to preserve the CloudFormation Logical ID 'ImageProcessorFunction' and avoid resource
      * replacement during the refactoring.
