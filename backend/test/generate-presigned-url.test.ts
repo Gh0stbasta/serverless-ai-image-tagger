@@ -29,7 +29,7 @@ let consoleErrorSpy: jest.SpyInstance;
  */
 const createApiEvent = (): APIGatewayProxyEventV2 => ({
   version: '2.0',
-  routeKey: 'POST /upload-url',
+  routeKey: 'GET /upload-url',
   rawPath: '/upload-url',
   rawQueryString: '',
   headers: {
@@ -41,14 +41,14 @@ const createApiEvent = (): APIGatewayProxyEventV2 => ({
     domainName: 'test-api.execute-api.us-east-1.amazonaws.com',
     domainPrefix: 'test-api',
     http: {
-      method: 'POST',
+      method: 'GET',
       path: '/upload-url',
       protocol: 'HTTP/1.1',
       sourceIp: '127.0.0.1',
       userAgent: 'test-agent',
     },
     requestId: 'test-request-id',
-    routeKey: 'POST /upload-url',
+    routeKey: 'GET /upload-url',
     stage: '$default',
     time: '01/Jan/2024:00:00:00 +0000',
     timeEpoch: 1704067200000,

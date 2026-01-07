@@ -357,33 +357,34 @@ export class ApiConstruct extends Construct {
     );
 
     /**
-     * API Gateway Route: POST /upload-url
+     * API Gateway Route: GET /upload-url
      * 
      * Architectural Decision: Creating a dedicated endpoint for presigned URL generation.
      * This follows the Single Responsibility Principle by separating URL generation from
      * actual upload operations.
      * 
      * The frontend flow:
-     * 1. POST /upload-url → Receives presigned URL and key
+     * 1. GET /upload-url → Receives presigned URL and key
      * 2. PUT {presignedUrl} → Uploads file directly to S3 (bypasses Lambda)
      * 3. S3 ObjectCreated event → Triggers ImageProcessor Lambda
      * 4. GET /images → Polls for processing results
      * 
-     * Using POST instead of GET because:
-     * - Future enhancement: Request body can include file metadata (size, type)
-     * - POST is semantically correct for operations that create resources (URLs)
-     * - Prevents caching issues with GET requests
+     * Using GET for this endpoint because:
+     * - The operation is idempotent and retrieves a resource (presigned URL)
+     * - No request body is needed - the Lambda generates unique keys automatically
+     * - Simpler frontend integration (no need to send POST request body)
+     * - Follows RESTful conventions for resource retrieval
      * 
      * Security Considerations:
      * - Future: Add authentication using API Gateway authorizers
      * - Future: Rate limiting to prevent abuse
-     * - Future: Validate file type/size in request body
+     * - Future: Validate file type/size via query parameters if needed
      * 
      * URL format: https://{api-id}.execute-api.{region}.amazonaws.com/upload-url
      */
     this.httpApi.addRoutes({
       path: '/upload-url',
-      methods: [apigatewayv2.HttpMethod.POST],
+      methods: [apigatewayv2.HttpMethod.GET],
       integration: generatePresignedUrlIntegration,
     });
   }
