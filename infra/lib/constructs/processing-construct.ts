@@ -112,6 +112,8 @@ export class ProcessingConstruct extends Construct {
       environment: {
         TABLE_NAME: props.table.tableName,
         BUCKET_NAME: props.bucket.bucketName,
+        REKOGNITION_MAX_LABELS: '10',
+        REKOGNITION_MIN_CONFIDENCE: '70',
       },
       bundling: {
         minify: true,
