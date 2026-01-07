@@ -283,7 +283,7 @@ export class ApiConstruct extends Construct {
        * - Restrict to specific origins: ['https://yourdomain.com', 'https://www.yourdomain.com']
        * - Consider environment-based configuration (dev vs prod origins)
        * 
-       * allowMethods: GET for reading images, POST for requesting presigned URLs, OPTIONS for preflight.
+       * allowMethods: GET for reading images, POST for requesting presigned URLs, PUT for future operations, OPTIONS for preflight.
        * 
        * allowHeaders: Specifies which headers the client can send. Content-Type is required
        * for JSON API requests. Add Authorization if implementing authentication.
@@ -293,6 +293,7 @@ export class ApiConstruct extends Construct {
         allowMethods: [
           apigatewayv2.CorsHttpMethod.GET,
           apigatewayv2.CorsHttpMethod.POST,
+          apigatewayv2.CorsHttpMethod.PUT,
           apigatewayv2.CorsHttpMethod.OPTIONS,
         ],
         allowHeaders: ['Content-Type'],
