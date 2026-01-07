@@ -1,15 +1,14 @@
 {
   "name": "serverless-ai-image-tagger-root",
   "version": "1.0.0",
-  "description": "Root management for AI Image Tagger Monorepo",
   "private": true,
   "scripts": {
-    "install-all": "npm install --prefix infra && npm install --prefix backend",
-    "test": "npm test --prefix infra",
-    "build": "npm run build --prefix infra",
-    "cdk": "npm run cdk --prefix infra --",
+    "install-all": "npm install --prefix infra && npm install --prefix backend && npm install --prefix frontend",
+    "test:backend": "npm test --prefix infra",
+    "test:frontend": "npm test --prefix frontend",
+    "test": "npm run test:backend && npm run test:frontend",
+    "build": "npm run build --prefix infra && npm run build --prefix frontend",
     "deploy": "npm run cdk --prefix infra -- deploy",
-    "destroy": "npm run cdk --prefix infra -- destroy",
     "synth": "npm run cdk --prefix infra -- synth"
   }
 }
