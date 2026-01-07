@@ -1,5 +1,62 @@
 # React + TypeScript + Vite
 
+Frontend for the Serverless AI Image Tagger application.
+
+## Features
+
+- **Image Upload**: Select and upload images directly to S3 using presigned URLs
+- **Image Gallery**: View all uploaded images with AI-generated tags
+- **Serverless Architecture**: Direct browser-to-S3 uploads for optimal performance
+
+## Configuration
+
+Create a `.env` file based on `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+Set the `VITE_API_URL` to your deployed API Gateway endpoint:
+
+```
+VITE_API_URL=https://your-api-id.execute-api.region.amazonaws.com
+```
+
+For local development, the app defaults to `http://localhost:3000` if `VITE_API_URL` is not set.
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Run tests
+npm test
+
+# Run linter
+npm run lint
+
+# Build for production
+npm run build
+```
+
+## Upload Flow
+
+1. User clicks "Upload Image" button
+2. File selection dialog opens
+3. User selects an image file
+4. Frontend requests presigned URL from `/upload-url` endpoint
+5. Frontend uploads file directly to S3 using the presigned URL
+6. S3 triggers Lambda for AI processing
+7. Frontend can poll `/images` endpoint to see processed results
+
+---
+
+## Original Vite Template Information
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:
