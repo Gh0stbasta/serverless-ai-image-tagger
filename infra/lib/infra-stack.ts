@@ -140,7 +140,6 @@ export class InfraStack extends cdk.Stack {
      * file size/type. The bucket itself has no public access.
      */
     const uploadBucket = new s3.Bucket(this, 'UploadBucket', {
-      bucketName: undefined, // Let CDK generate a unique name to avoid conflicts
       encryption: s3.BucketEncryption.S3_MANAGED,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,

@@ -304,22 +304,29 @@ test('S3 Upload Bucket has DESTROY removal policy with autoDeleteObjects', () =>
   // WHEN
   const template = Template.fromStack(stack);
   
-  // THEN - Verify bucket has DeletionPolicy set to Delete
-  const buckets = template.findResources('AWS::S3::Bucket');
-  
-  // Find the upload bucket (not the one used for autoDeleteObjects custom resource)
-  let foundUploadBucket = false;
-  for (const [logicalId, resource] of Object.entries(buckets)) {
-    // The upload bucket should have the deletion policy and not be a CDK internal bucket
-    if (resource.DeletionPolicy === 'Delete' && resource.UpdateReplacePolicy === 'Delete') {
-      foundUploadBucket = true;
-      // Verify it has the encryption and CORS config (to confirm it's our upload bucket)
-      expect(resource.Properties.BucketEncryption).toBeDefined();
-      expect(resource.Properties.CorsConfiguration).toBeDefined();
-    }
-  }
-  
-  expect(foundUploadBucket).toBe(true);
+  // THEN - Verify bucket has both encryption and CORS (our upload bucket) with deletion policy
+  template.hasResource('AWS::S3::Bucket', {
+    Properties: {
+      BucketEncryption: Match.objectLike({
+        ServerSideEncryptionConfiguration: Match.arrayWith([
+          Match.objectLike({
+            ServerSideEncryptionByDefault: {
+              SSEAlgorithm: 'AES256',
+            },
+          }),
+        ]),
+      }),
+      CorsConfiguration: Match.objectLike({
+        CorsRules: Match.arrayWith([
+          Match.objectLike({
+            AllowedMethods: ['GET', 'PUT'],
+          }),
+        ]),
+      }),
+    },
+    DeletionPolicy: 'Delete',
+    UpdateReplacePolicy: 'Delete',
+  });
 });
 
 /**
