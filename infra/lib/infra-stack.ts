@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { StorageConstruct, DatabaseConstruct, ProcessingConstruct } from './constructs';
 
@@ -162,6 +163,34 @@ export class InfraStack extends cdk.Stack {
       executionRole: lambdaExecutionRole,
     });
     this.imageProcessorFunction = processing.imageProcessorFunction;
+
+    /**
+     * S3 Event Notification: Trigger Lambda on image upload.
+     * Architectural Decision: Configuring S3 event notifications at the stack level
+     * enables the event-driven architecture. When an image is uploaded to S3, the
+     * ObjectCreated event automatically triggers the ImageProcessor Lambda function,
+     * eliminating the need for polling and reducing latency.
+     * 
+     * Event Filter: s3:ObjectCreated:* captures all object creation events including:
+     * - s3:ObjectCreated:Put (standard uploads)
+     * - s3:ObjectCreated:Post (form-based uploads)
+     * - s3:ObjectCreated:Copy (object copies)
+     * - s3:ObjectCreated:CompleteMultipartUpload (large file uploads)
+     * 
+     * This ensures the Lambda is triggered regardless of how the image is uploaded,
+     * providing a robust event-driven integration.
+     * 
+     * Cost Impact: S3 event notifications are free. This design choice replaces the need
+     * for polling mechanisms (which would require a scheduled Lambda and incur costs) with
+     * a reactive, zero-cost notification system.
+     * 
+     * Permissions: CDK automatically grants the S3 bucket permission to invoke the Lambda
+     * function by adding the necessary resource-based policy to the Lambda function.
+     */
+    storage.uploadBucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3n.LambdaDestination(processing.imageProcessorFunction)
+    );
 
     // CloudFormation Outputs - created at stack level to preserve exact Output IDs
     
