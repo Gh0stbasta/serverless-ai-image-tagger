@@ -192,10 +192,12 @@ export class InfraStack extends cdk.Stack {
      */
     const api = new ApiConstruct(this, 'Api', {
       table: database.table,
+      bucket: storage.uploadBucket,
       executionRole: lambdaExecutionRole,
     });
     this.httpApi = api.httpApi;
     this.getImagesFunction = api.getImagesFunction;
+    this.generatePresignedUrlFunction = api.generatePresignedUrlFunction;
 
     // CloudFormation Outputs - created at stack level to preserve exact Output IDs
     
@@ -262,6 +264,18 @@ export class InfraStack extends cdk.Stack {
       description: 'ARN of the GetImages Lambda function',
       exportName: 'GetImagesFunctionArn',
     });
+
+    new cdk.CfnOutput(this, 'GeneratePresignedUrlFunctionName', {
+      value: api.generatePresignedUrlFunction.functionName,
+      description: 'Name of the GeneratePresignedUrl Lambda function',
+      exportName: 'GeneratePresignedUrlFunctionName',
+    });
+
+    new cdk.CfnOutput(this, 'GeneratePresignedUrlFunctionArn', {
+      value: api.generatePresignedUrlFunction.functionArn,
+      description: 'ARN of the GeneratePresignedUrl Lambda function',
+      exportName: 'GeneratePresignedUrlFunctionArn',
+    });
   }
 
   /**
@@ -315,4 +329,13 @@ export class InfraStack extends cdk.Stack {
    * - Set up monitoring and alarms
    */
   public readonly getImagesFunction: NodejsFunction;
+
+  /**
+   * Public property to expose the GeneratePresignedUrl Lambda function.
+   * This enables other constructs to:
+   * - Configure additional API routes
+   * - Grant additional IAM permissions as needed
+   * - Set up monitoring and alarms
+   */
+  public readonly generatePresignedUrlFunction: NodejsFunction;
 }

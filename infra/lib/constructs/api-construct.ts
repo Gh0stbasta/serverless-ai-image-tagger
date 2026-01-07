@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
@@ -24,6 +25,12 @@ export interface ApiProps {
   readonly table: dynamodb.ITable;
 
   /**
+   * The S3 bucket where images are uploaded.
+   * The GeneratePresignedUrl Lambda needs this to create presigned PUT URLs.
+   */
+  readonly bucket: s3.IBucket;
+
+  /**
    * The IAM role for Lambda execution.
    * This should be the base execution role with CloudWatch Logs permissions.
    */
@@ -33,9 +40,9 @@ export interface ApiProps {
 /**
  * ApiConstruct
  * 
- * Architectural Decision: Encapsulates API Gateway and read Lambda resources following
- * ADR-005 (Separation of Concerns). This construct manages the HTTP API for reading
- * image metadata, isolating all API configuration details from the main stack.
+ * Architectural Decision: Encapsulates API Gateway and Lambda resources following
+ * ADR-005 (Separation of Concerns). This construct manages the HTTP API for both
+ * read operations (GetImages) and write operations (GeneratePresignedUrl).
  * 
  * This follows the Single Responsibility Principle and makes the API layer
  * independently testable and reusable.
@@ -43,8 +50,9 @@ export interface ApiProps {
  * Responsibilities:
  * - Creates and configures the HTTP API Gateway (API Gateway v2)
  * - Creates the GetImages Lambda function for reading all image metadata
- * - Grants IAM permissions for DynamoDB read access
- * - Wires the Lambda to API Gateway routes with proper CORS configuration
+ * - Creates the GeneratePresignedUrl Lambda function for secure uploads
+ * - Grants IAM permissions for DynamoDB read and S3 write access
+ * - Wires Lambda functions to API Gateway routes with proper CORS configuration
  * 
  * Cost Optimization:
  * - Uses HTTP API (API Gateway v2) instead of REST API for ~70% cost savings
@@ -69,6 +77,15 @@ export class ApiConstruct extends Construct {
    * - Set up monitoring and alarms
    */
   public readonly getImagesFunction: NodejsFunction;
+
+  /**
+   * Public property to expose the GeneratePresignedUrl Lambda function.
+   * This enables other constructs to:
+   * - Configure additional API routes
+   * - Grant additional IAM permissions as needed
+   * - Set up monitoring and alarms
+   */
+  public readonly generatePresignedUrlFunction: NodejsFunction;
 
   constructor(scope: Construct, id: string, props: ApiProps) {
     super(scope, id);
@@ -156,6 +173,77 @@ export class ApiConstruct extends Construct {
     props.table.grantReadData(this.getImagesFunction);
 
     /**
+     * GeneratePresignedUrl Lambda Function
+     * 
+     * Architectural Decision: This Lambda generates presigned S3 URLs for secure browser uploads.
+     * By using presigned URLs, we eliminate the need to embed AWS credentials in the frontend,
+     * following AWS security best practices. The URLs are time-limited (5 minutes) to minimize
+     * the exposure window.
+     * 
+     * Key Design Choices:
+     * - Runtime Node.js 20.x: Latest LTS version with improved performance
+     * - Architecture ARM64 (Graviton2): 34% better price-performance vs x86_64 (FinOps optimization)
+     * - Memory 256 MB: Minimal allocation for generating presigned URLs
+     * - Timeout 30 seconds: Sufficient for URL generation (typically completes in <100ms)
+     * - Bundling: esbuild with minification for efficient cold starts
+     * 
+     * Security:
+     * - Uses base executionRole for CloudWatch Logs
+     * - S3 PutObject permission granted via bucket.grantPut() for least privilege
+     * - Presigned URLs expire after 5 minutes
+     * - Future: Add authentication to prevent unauthorized URL generation
+     * 
+     * Environment Variables:
+     * - BUCKET_NAME: S3 bucket name for uploads. Using bucket.bucketName ensures
+     *   the Lambda always references the correct bucket.
+     * 
+     * Cost Optimization:
+     * - ARM64 reduces costs by ~20%
+     * - Minimal memory (256 MB) keeps per-invocation costs low
+     * - Direct browser-to-S3 uploads bypass Lambda data transfer
+     */
+    this.generatePresignedUrlFunction = new NodejsFunction(this, 'GeneratePresignedUrlFunction', {
+      description: 'Generates presigned S3 URLs for secure browser-based image uploads',
+      runtime: lambda.Runtime.NODEJS_20_X,
+      architecture: lambda.Architecture.ARM_64,
+      handler: 'handler',
+      entry: path.join(__dirname, '..', '..', '..', 'backend', 'generate-presigned-url.ts'),
+      role: props.executionRole,
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 256,
+      environment: {
+        BUCKET_NAME: props.bucket.bucketName,
+      },
+      bundling: {
+        minify: true,
+        sourceMap: true,
+        target: 'node20',
+        forceDockerBundling: false,
+      },
+    });
+
+    /**
+     * IAM Permissions: Grant Lambda write access to S3 for presigned URLs.
+     * 
+     * Architectural Decision: Using CDK's grantPut method to implement least-privilege access.
+     * This grants only s3:PutObject permission, which is the minimum required for presigned
+     * PUT URL generation and usage.
+     * 
+     * grantPut allows:
+     * - s3:PutObject
+     * 
+     * This is more restrictive than grantReadWrite as it excludes read, delete, and other
+     * operations, following the principle of least privilege. The Lambda only needs to
+     * generate presigned PUT URLs; it doesn't need to read or delete objects.
+     * 
+     * Security: The presigned URL inherits these permissions and allows the holder to
+     * PUT objects to S3 until the URL expires (5 minutes).
+     * 
+     * Cost Impact: No additional costs for IAM permissions.
+     */
+    props.bucket.grantPut(this.generatePresignedUrlFunction);
+
+    /**
      * HTTP API Gateway (API Gateway v2)
      * 
      * Architectural Decision: Using HTTP API (API Gateway v2) instead of REST API for:
@@ -183,7 +271,7 @@ export class ApiConstruct extends Construct {
      */
     this.httpApi = new apigatewayv2.HttpApi(this, 'HttpApi', {
       apiName: 'ServerlessImageTaggerApi',
-      description: 'HTTP API for Serverless AI Image Tagger - read operations for image metadata',
+      description: 'HTTP API for Serverless AI Image Tagger - read and upload operations',
       /**
        * CORS Configuration for Frontend Access
        * 
@@ -195,15 +283,18 @@ export class ApiConstruct extends Construct {
        * - Restrict to specific origins: ['https://yourdomain.com', 'https://www.yourdomain.com']
        * - Consider environment-based configuration (dev vs prod origins)
        * 
-       * allowMethods: Only GET and OPTIONS are enabled as this is a read-only API endpoint.
-       * OPTIONS is required for CORS preflight requests.
+       * allowMethods: GET for reading images, POST for requesting presigned URLs, OPTIONS for preflight.
        * 
        * allowHeaders: Specifies which headers the client can send. Content-Type is required
        * for JSON API requests. Add Authorization if implementing authentication.
        */
       corsPreflight: {
         allowOrigins: ['*'],
-        allowMethods: [apigatewayv2.CorsHttpMethod.GET, apigatewayv2.CorsHttpMethod.OPTIONS],
+        allowMethods: [
+          apigatewayv2.CorsHttpMethod.GET,
+          apigatewayv2.CorsHttpMethod.POST,
+          apigatewayv2.CorsHttpMethod.OPTIONS,
+        ],
         allowHeaders: ['Content-Type'],
       },
     });
@@ -248,6 +339,51 @@ export class ApiConstruct extends Construct {
       path: '/images',
       methods: [apigatewayv2.HttpMethod.GET],
       integration: getImagesIntegration,
+    });
+
+    /**
+     * Lambda Integration for GeneratePresignedUrl
+     * 
+     * Architectural Decision: Using HttpLambdaIntegration to wire the presigned URL
+     * generation Lambda to API Gateway. This integration handles all the plumbing:
+     * - Grants API Gateway permission to invoke the Lambda
+     * - Transforms HTTP requests to Lambda events (payload format 2.0)
+     * - Transforms Lambda responses back to HTTP responses
+     */
+    const generatePresignedUrlIntegration = new HttpLambdaIntegration(
+      'GeneratePresignedUrlIntegration',
+      this.generatePresignedUrlFunction
+    );
+
+    /**
+     * API Gateway Route: POST /upload-url
+     * 
+     * Architectural Decision: Creating a dedicated endpoint for presigned URL generation.
+     * This follows the Single Responsibility Principle by separating URL generation from
+     * actual upload operations.
+     * 
+     * The frontend flow:
+     * 1. POST /upload-url → Receives presigned URL and key
+     * 2. PUT {presignedUrl} → Uploads file directly to S3 (bypasses Lambda)
+     * 3. S3 ObjectCreated event → Triggers ImageProcessor Lambda
+     * 4. GET /images → Polls for processing results
+     * 
+     * Using POST instead of GET because:
+     * - Future enhancement: Request body can include file metadata (size, type)
+     * - POST is semantically correct for operations that create resources (URLs)
+     * - Prevents caching issues with GET requests
+     * 
+     * Security Considerations:
+     * - Future: Add authentication using API Gateway authorizers
+     * - Future: Rate limiting to prevent abuse
+     * - Future: Validate file type/size in request body
+     * 
+     * URL format: https://{api-id}.execute-api.{region}.amazonaws.com/upload-url
+     */
+    this.httpApi.addRoutes({
+      path: '/upload-url',
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: generatePresignedUrlIntegration,
     });
   }
 }
