@@ -71,3 +71,4 @@ temp/
 # AWS
 .aws-sam/
 samconfig.toml
+backend/node_modules
