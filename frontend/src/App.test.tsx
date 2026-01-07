@@ -16,54 +16,117 @@ describe('App Component', () => {
   })
 
   describe('Component Mounting', () => {
-    it('renders without crashing', () => {
+    it('renders without crashing', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
       render(<App />)
-      expect(screen.getByText('AI Image Tagger')).toBeInTheDocument()
+      
+      await waitFor(() => {
+        expect(screen.getByText('AI Image Tagger')).toBeInTheDocument()
+      })
     })
 
-    it('renders the main heading', () => {
+    it('renders the main heading', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
       render(<App />)
-      expect(screen.getByRole('heading', { name: /AI Image Tagger/i })).toBeInTheDocument()
+      
+      await waitFor(() => {
+        expect(screen.getByRole('heading', { name: /AI Image Tagger/i })).toBeInTheDocument()
+      })
     })
 
-    it('renders the subtitle', () => {
+    it('renders the subtitle', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
       render(<App />)
-      expect(screen.getByText(/Serverless Image Analysis with AWS Rekognition/i)).toBeInTheDocument()
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Serverless Image Analysis with AWS Rekognition/i)).toBeInTheDocument()
+      })
     })
 
-    it('renders the upload button', () => {
+    it('renders the upload button', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
       render(<App />)
-      expect(screen.getByRole('button', { name: /Upload Image/i })).toBeInTheDocument()
+      
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: /Upload Image/i })).toBeInTheDocument()
+      })
     })
 
-    it('renders hidden file input', () => {
+    it('renders hidden file input', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
       const { container } = render(<App />)
-      const fileInput = container.querySelector('input[type="file"]')
-      expect(fileInput).toBeInTheDocument()
-      expect(fileInput).toHaveAttribute('accept', 'image/*')
+      
+      await waitFor(() => {
+        const fileInput = container.querySelector('input[type="file"]')
+        expect(fileInput).toBeInTheDocument()
+        expect(fileInput).toHaveAttribute('accept', 'image/*')
+      })
     })
   })
 
-  describe('Empty State Rendering', () => {
-    it('displays empty state message when no images are present', () => {
+  describe('Gallery Component Integration', () => {
+    it('renders the Gallery component', async () => {
+      // Mock the /images endpoint to return empty array
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
       render(<App />)
-      expect(screen.getByText(/No images yet. Upload one to get started!/i)).toBeInTheDocument()
+      
+      // Wait for the Gallery to fetch and render
+      await waitFor(() => {
+        expect(screen.getByText(/Your Images \(0\)/i)).toBeInTheDocument()
+      })
     })
 
-    it('displays correct image count (0) when empty', () => {
-      render(<App />)
-      expect(screen.getByText(/Your Images \(0\)/i)).toBeInTheDocument()
-    })
+    it('Gallery component receives correct apiUrl', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
 
-    it('does not render the images grid when empty', () => {
-      const { container } = render(<App />)
-      expect(container.querySelector('.images-grid')).not.toBeInTheDocument()
+      render(<App />)
+
+      await waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledWith('http://localhost:3000/images')
+      })
     })
   })
 
   describe('File Upload Functionality', () => {
-    it('triggers file input when upload button is clicked', () => {
+    it('triggers file input when upload button is clicked', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
       const { container } = render(<App />)
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Your Images \(0\)/i)).toBeInTheDocument()
+      })
+
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
       const clickSpy = vi.spyOn(fileInput, 'click')
       
@@ -74,15 +137,32 @@ describe('App Component', () => {
     })
 
     it('does not upload when no file is selected', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
       const { container } = render(<App />)
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Your Images \(0\)/i)).toBeInTheDocument()
+      })
+
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
       
       fireEvent.change(fileInput, { target: { files: [] } })
       
-      expect(mockFetch).not.toHaveBeenCalled()
+      // Should only have called fetch once for the initial Gallery fetch
+      expect(mockFetch).toHaveBeenCalledTimes(1)
     })
 
     it('successfully uploads a file with presigned URL', async () => {
+      // Mock Gallery fetch
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
       // Mock successful presigned URL response
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -99,6 +179,11 @@ describe('App Component', () => {
       })
 
       const { container } = render(<App />)
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Your Images \(0\)/i)).toBeInTheDocument()
+      })
+
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
       
       const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
@@ -107,14 +192,14 @@ describe('App Component', () => {
       
       // Wait for upload to complete
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledTimes(2)
+        expect(mockFetch).toHaveBeenCalledTimes(3) // Gallery + presigned URL + S3 upload
       })
       
-      // Verify presigned URL was fetched
-      expect(mockFetch).toHaveBeenNthCalledWith(1, 'http://localhost:3000/upload-url')
+      // Verify presigned URL was fetched (2nd call, after Gallery)
+      expect(mockFetch).toHaveBeenNthCalledWith(2, 'http://localhost:3000/upload-url')
       
-      // Verify file was uploaded to S3
-      expect(mockFetch).toHaveBeenNthCalledWith(2, 'https://s3.amazonaws.com/test-bucket/test-key', {
+      // Verify file was uploaded to S3 (3rd call)
+      expect(mockFetch).toHaveBeenNthCalledWith(3, 'https://s3.amazonaws.com/test-bucket/test-key', {
         method: 'PUT',
         body: file,
         headers: {
@@ -124,9 +209,21 @@ describe('App Component', () => {
     })
 
     it('shows uploading state during upload', async () => {
-      mockFetch.mockImplementation(() => new Promise(() => {})) // Never resolves
-      
+      // Mock Gallery fetch first
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
       const { container } = render(<App />)
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Your Images \(0\)/i)).toBeInTheDocument()
+      })
+
+      // Now mock the upload to never resolve
+      mockFetch.mockImplementation(() => new Promise(() => {}))
+
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
       const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
       
@@ -140,9 +237,21 @@ describe('App Component', () => {
     })
 
     it('handles presigned URL fetch error', async () => {
-      mockFetch.mockRejectedValueOnce(new Error('Network error'))
-      
+      // Mock Gallery fetch first
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
       const { container } = render(<App />)
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Your Images \(0\)/i)).toBeInTheDocument()
+      })
+
+      // Mock error for presigned URL fetch
+      mockFetch.mockRejectedValueOnce(new Error('Network error'))
+
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
       const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
       
@@ -157,6 +266,18 @@ describe('App Component', () => {
     })
 
     it('handles S3 upload error', async () => {
+      // Mock Gallery fetch
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
+      const { container } = render(<App />)
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Your Images \(0\)/i)).toBeInTheDocument()
+      })
+
       // Mock successful presigned URL response
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -174,7 +295,6 @@ describe('App Component', () => {
         statusText: 'Forbidden',
       })
 
-      const { container } = render(<App />)
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
       const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
       
@@ -186,13 +306,25 @@ describe('App Component', () => {
     })
 
     it('handles non-OK presigned URL response', async () => {
+      // Mock Gallery fetch
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
+      const { container } = render(<App />)
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Your Images \(0\)/i)).toBeInTheDocument()
+      })
+
+      // Mock error response
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
       })
 
-      const { container } = render(<App />)
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
       const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
       
@@ -204,6 +336,13 @@ describe('App Component', () => {
     })
 
     it('resets file input after successful upload', async () => {
+      // Mock /images endpoint for Gallery
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
+      // Mock presigned URL response
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -213,28 +352,81 @@ describe('App Component', () => {
         }),
       })
       
+      // Mock S3 upload
       mockFetch.mockResolvedValueOnce({
         ok: true,
       })
 
       const { container } = render(<App />)
+      
+      // Wait for initial Gallery fetch
+      await waitFor(() => {
+        expect(screen.getByText(/Your Images \(0\)/i)).toBeInTheDocument()
+      })
+
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
       const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
       
       fireEvent.change(fileInput, { target: { files: [file] } })
       
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledTimes(2)
+        expect(mockFetch).toHaveBeenCalledTimes(3) // Gallery + presigned URL + S3 upload
       })
       
       // File input should be reset
       expect(fileInput.value).toBe('')
     })
 
+    it('shows success message after successful upload', async () => {
+      // Mock /images endpoint for Gallery
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
+      // Mock presigned URL response
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          uploadUrl: 'https://s3.amazonaws.com/test-bucket/test-key',
+          key: 'uploads/test-key.jpg',
+          expiresIn: 300,
+        }),
+      })
+      
+      // Mock S3 upload
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+      })
+
+      const { container } = render(<App />)
+      
+      // Wait for initial Gallery fetch
+      await waitFor(() => {
+        expect(screen.getByText(/Your Images \(0\)/i)).toBeInTheDocument()
+      })
+
+      const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
+      const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
+      
+      fireEvent.change(fileInput, { target: { files: [file] } })
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Upload successful! Processing image.../i)).toBeInTheDocument()
+      })
+    })
+
     it('uses correct API URL from environment variable', async () => {
       // Set environment variable
       import.meta.env.VITE_API_URL = 'https://api.example.com'
       
+      // Mock Gallery fetch
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
+      // Mock presigned URL
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -245,6 +437,11 @@ describe('App Component', () => {
       })
 
       const { container } = render(<App />)
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Your Images \(0\)/i)).toBeInTheDocument()
+      })
+
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
       const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
       
@@ -259,6 +456,13 @@ describe('App Component', () => {
     })
 
     it('uses default Content-Type for files without type', async () => {
+      // Mock Gallery fetch
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
+      // Mock presigned URL
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -268,11 +472,16 @@ describe('App Component', () => {
         }),
       })
       
+      // Mock S3 upload
       mockFetch.mockResolvedValueOnce({
         ok: true,
       })
 
       const { container } = render(<App />)
+      
+      await waitFor(() => {
+        expect(screen.getByText(/Your Images \(0\)/i)).toBeInTheDocument()
+      })
       const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement
       
       const file = new File(['test'], 'test.jpg', { type: '' })
@@ -280,10 +489,10 @@ describe('App Component', () => {
       fireEvent.change(fileInput, { target: { files: [file] } })
       
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledTimes(2)
+        expect(mockFetch).toHaveBeenCalledTimes(3) // Gallery + presigned URL + S3 upload
       })
       
-      expect(mockFetch).toHaveBeenNthCalledWith(2, expect.any(String), {
+      expect(mockFetch).toHaveBeenNthCalledWith(3, expect.any(String), {
         method: 'PUT',
         body: file,
         headers: {
@@ -294,19 +503,35 @@ describe('App Component', () => {
   })
 
   describe('Accessibility', () => {
-    it('has proper semantic HTML structure', () => {
+    it('has proper semantic HTML structure', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
       render(<App />)
-      expect(screen.getByRole('banner')).toBeInTheDocument()
-      expect(screen.getByRole('main')).toBeInTheDocument()
-      expect(screen.getByRole('button')).toBeInTheDocument()
+      
+      await waitFor(() => {
+        expect(screen.getByRole('banner')).toBeInTheDocument()
+        expect(screen.getByRole('main')).toBeInTheDocument()
+        expect(screen.getByRole('button')).toBeInTheDocument()
+      })
     })
 
-    it('headings are properly structured', () => {
+    it('headings are properly structured', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
       render(<App />)
-      const h1 = screen.getByRole('heading', { level: 1 })
-      const h2 = screen.getByRole('heading', { level: 2 })
-      expect(h1).toBeInTheDocument()
-      expect(h2).toBeInTheDocument()
+      
+      await waitFor(() => {
+        const h1 = screen.getByRole('heading', { level: 1 })
+        const h2 = screen.getByRole('heading', { level: 2 })
+        expect(h1).toBeInTheDocument()
+        expect(h2).toBeInTheDocument()
+      })
     })
   })
 })
