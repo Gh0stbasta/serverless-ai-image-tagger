@@ -34,11 +34,13 @@ interface GalleryProps {
  * This follows the Single Responsibility Principle, making the component reusable and testable.
  * 
  * Features:
- * - Fetches images from the /images API endpoint
+ * - Fetches images from the /images API endpoint on mount
  * - Displays images in a responsive grid layout
  * - Shows AI-detected labels as badges with confidence scores
  * - Implements loading and error states for better UX
- * - Auto-refreshes when new images are available
+ * 
+ * Note: The component fetches data only on mount. To see newly uploaded images,
+ * the page needs to be refreshed or the component needs to be remounted.
  * 
  * @param apiUrl - The base URL of the API Gateway endpoint
  */

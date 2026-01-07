@@ -57,7 +57,7 @@ function App() {
 
       console.log(`Successfully uploaded file to S3 with key: ${data.key}`)
       
-      // Set upload success state to trigger Gallery refresh
+      // Show success message to user
       setUploadSuccess(true)
       setTimeout(() => setUploadSuccess(false), 3000)
       
