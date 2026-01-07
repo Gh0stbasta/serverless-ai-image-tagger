@@ -63,6 +63,16 @@
   cursor: not-allowed;
 }
 
+.error-message {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 6px;
+  color: #ef4444;
+  font-size: 0.9rem;
+}
+
 /* Images Section */
 .images-section {
   padding: 1.5rem;
