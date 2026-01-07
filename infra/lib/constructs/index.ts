@@ -15,4 +15,5 @@
 
 export { StorageConstruct } from './storage-construct';
 export { DatabaseConstruct } from './database-construct';
-export { ProcessingConstruct, ProcessingProps } from './processing-construct';
+export { ProcessingConstruct } from './processing-construct';
+export type { ProcessingProps } from './processing-construct';
