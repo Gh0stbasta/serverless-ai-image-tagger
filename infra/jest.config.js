@@ -3,16 +3,16 @@ module.exports = {
   preset: 'ts-jest',
   roots: ['<rootDir>/test', '<rootDir>/../backend/test'],
   testMatch: ['**/*.test.ts'],
-  transform: {
-    '^.+\\.tsx?$': ['ts-jest', {
+  globals: {
+    'ts-jest': {
       tsconfig: {
         target: 'ES2022',
         module: 'commonjs',
-        moduleResolution: 'node',
+        moduleResolution: 'NodeNext',
         esModuleInterop: true,
         skipLibCheck: true,
       }
-    }]
+    }
   },
   setupFilesAfterEnv: ['aws-cdk-lib/testhelpers/jest-autoclean'],
   collectCoverageFrom: [
