@@ -3,8 +3,9 @@ import { Construct } from 'constructs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { StorageConstruct, DatabaseConstruct, ProcessingConstruct } from './constructs';
+import { StorageConstruct, DatabaseConstruct, ProcessingConstruct, ApiConstruct } from './constructs';
 
 export class InfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -171,6 +172,31 @@ export class InfraStack extends cdk.Stack {
     });
     this.imageProcessorFunction = processing.imageProcessorFunction;
 
+    /**
+     * API Layer: HTTP API Gateway and Read Lambda Functions.
+     * Architectural Decision: Using ApiConstruct to encapsulate all API Gateway
+     * configuration following ADR-005. This promotes separation of concerns and
+     * makes the API layer independently testable and reusable.
+     * 
+     * The ApiConstruct manages:
+     * - HTTP API Gateway (API Gateway v2) for cost-effective API hosting
+     * - GetImages Lambda function for retrieving all image metadata
+     * - CORS configuration for frontend access
+     * - IAM permissions for DynamoDB read access
+     * 
+     * Using HTTP API instead of REST API provides ~70% cost savings while
+     * maintaining the required functionality for this read-only endpoint.
+     * 
+     * Note: Using 'Api' as the construct ID with logical resource IDs following
+     * the pattern '{ResourceType}{Purpose}' (e.g., HttpApi, GetImagesFunction).
+     */
+    const api = new ApiConstruct(this, 'Api', {
+      table: database.table,
+      executionRole: lambdaExecutionRole,
+    });
+    this.httpApi = api.httpApi;
+    this.getImagesFunction = api.getImagesFunction;
+
     // CloudFormation Outputs - created at stack level to preserve exact Output IDs
     
     // S3 Bucket Outputs
@@ -211,6 +237,31 @@ export class InfraStack extends cdk.Stack {
       description: 'ARN of the ImageProcessor Lambda function',
       exportName: 'ImageProcessorFunctionArn',
     });
+
+    // API Gateway Outputs
+    new cdk.CfnOutput(this, 'HttpApiUrl', {
+      value: api.httpApi.url || 'N/A',
+      description: 'URL of the HTTP API Gateway for accessing image metadata',
+      exportName: 'HttpApiUrl',
+    });
+
+    new cdk.CfnOutput(this, 'HttpApiId', {
+      value: api.httpApi.httpApiId,
+      description: 'ID of the HTTP API Gateway',
+      exportName: 'HttpApiId',
+    });
+
+    new cdk.CfnOutput(this, 'GetImagesFunctionName', {
+      value: api.getImagesFunction.functionName,
+      description: 'Name of the GetImages Lambda function',
+      exportName: 'GetImagesFunctionName',
+    });
+
+    new cdk.CfnOutput(this, 'GetImagesFunctionArn', {
+      value: api.getImagesFunction.functionArn,
+      description: 'ARN of the GetImages Lambda function',
+      exportName: 'GetImagesFunctionArn',
+    });
   }
 
   /**
@@ -246,4 +297,22 @@ export class InfraStack extends cdk.Stack {
    * - Grant additional IAM permissions as needed
    */
   public readonly imageProcessorFunction: NodejsFunction;
+
+  /**
+   * Public property to expose the HTTP API Gateway.
+   * This enables other constructs to reference the API for:
+   * - Adding additional routes and integrations
+   * - Configuring custom domains
+   * - Setting up API Gateway stages
+   */
+  public readonly httpApi: apigatewayv2.HttpApi;
+
+  /**
+   * Public property to expose the GetImages Lambda function.
+   * This enables other constructs to:
+   * - Configure additional API routes
+   * - Grant additional IAM permissions as needed
+   * - Set up monitoring and alarms
+   */
+  public readonly getImagesFunction: NodejsFunction;
 }
