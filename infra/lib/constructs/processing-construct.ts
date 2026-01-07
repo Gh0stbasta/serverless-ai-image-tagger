@@ -86,6 +86,7 @@ export class ProcessingConstruct extends Construct {
      * - Uses the base lambdaExecutionRole which provides CloudWatch Logs permissions.
      * - Additional permissions (S3 read, DynamoDB write) are granted after function creation
      *   using CDK's grant methods to implement least-privilege IAM policies.
+     * - Rekognition access will be added in a future iteration when AI processing is implemented.
      * 
      * Environment Variables:
      * - TABLE_NAME: DynamoDB table name for storing image metadata. Using table.tableName
@@ -139,7 +140,8 @@ export class ProcessingConstruct extends Construct {
      *   This is required to download uploaded images for processing.
      * 
      * - grantWriteData: Allows Lambda to write items to the DynamoDB table (dynamodb:PutItem, 
-     *   dynamodb:UpdateItem). This is required to store image metadata and AI-generated labels.
+     *   dynamodb:UpdateItem, dynamodb:DeleteItem). This is required to store image metadata 
+     *   and AI-generated labels.
      * 
      * Cost Impact: No additional costs for IAM permissions. These are necessary for the Lambda
      * to function and follow AWS security best practices by granting only the minimum required
