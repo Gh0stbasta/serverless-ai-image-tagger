@@ -654,3 +654,188 @@ test('DynamoDB Table uses STANDARD table class', () => {
     TableClass: 'STANDARD',
   });
 });
+
+/**
+ * Test to verify ImageProcessor Lambda Function is created with correct runtime.
+ * This ensures the Lambda uses Node.js 20.x for latest features and performance.
+ */
+test('ImageProcessor Lambda Function is created with Node.js 20.x runtime', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify Lambda function has correct runtime
+  template.hasResourceProperties('AWS::Lambda::Function', {
+    FunctionName: 'ServerlessAITagger-ImageProcessor',
+    Runtime: 'nodejs20.x',
+    Handler: 'index.handler',
+  });
+});
+
+/**
+ * Test to verify ImageProcessor Lambda Function uses ARM64 architecture.
+ * This ensures cost optimization through Graviton2 processors.
+ */
+test('ImageProcessor Lambda Function uses ARM64 architecture for cost optimization', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify Lambda uses ARM64 (Graviton2)
+  template.hasResourceProperties('AWS::Lambda::Function', {
+    Architectures: ['arm64'],
+  });
+});
+
+/**
+ * Test to verify ImageProcessor Lambda Function has correct timeout and memory.
+ * This ensures adequate resources for image processing while minimizing costs.
+ */
+test('ImageProcessor Lambda Function has correct timeout and memory configuration', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify timeout and memory settings
+  template.hasResourceProperties('AWS::Lambda::Function', {
+    Timeout: 30,
+    MemorySize: 256,
+  });
+});
+
+/**
+ * Test to verify ImageProcessor Lambda Function has environment variables.
+ * This ensures the function can access DynamoDB table and S3 bucket at runtime.
+ */
+test('ImageProcessor Lambda Function has correct environment variables', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify environment variables are set
+  template.hasResourceProperties('AWS::Lambda::Function', {
+    Environment: {
+      Variables: {
+        TABLE_NAME: Match.anyValue(),
+        BUCKET_NAME: Match.anyValue(),
+      },
+    },
+  });
+});
+
+/**
+ * Test to verify ImageProcessor Lambda Function uses the base execution role.
+ * This ensures the function starts with minimal CloudWatch Logs permissions.
+ */
+test('ImageProcessor Lambda Function uses the base Lambda execution role', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify Lambda uses the correct role
+  // The role should be a reference to the LambdaExecutionRole created earlier
+  template.hasResourceProperties('AWS::Lambda::Function', {
+    Role: Match.objectLike({
+      'Fn::GetAtt': Match.arrayWith([
+        Match.stringLikeRegexp('LambdaExecutionRole'),
+      ]),
+    }),
+  });
+});
+
+/**
+ * Test to verify ImageProcessor Lambda Function name is exported as CloudFormation output.
+ * This output is used for manual testing and monitoring.
+ */
+test('ImageProcessor Lambda Function name is exported as CloudFormation output', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify CloudFormation output exists
+  template.hasOutput('ImageProcessorFunctionName', {
+    Description: 'Name of the ImageProcessor Lambda function',
+    Export: {
+      Name: 'ImageProcessorFunctionName',
+    },
+  });
+});
+
+/**
+ * Test to verify ImageProcessor Lambda Function ARN is exported as CloudFormation output.
+ * This output is used for cross-stack references and IAM policies.
+ */
+test('ImageProcessor Lambda Function ARN is exported as CloudFormation output', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify CloudFormation output exists
+  template.hasOutput('ImageProcessorFunctionArn', {
+    Description: 'ARN of the ImageProcessor Lambda function',
+    Export: {
+      Name: 'ImageProcessorFunctionArn',
+    },
+  });
+});
+
+/**
+ * Test to verify ImageProcessor Lambda Function is exposed as a public property.
+ * This ensures other constructs can reference the function.
+ */
+test('ImageProcessor Lambda Function is exposed as a public property', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN & THEN - Verify the function is accessible as a public property
+  expect(stack.imageProcessorFunction).toBeDefined();
+  expect(stack.imageProcessorFunction.functionArn).toBeDefined();
+  expect(stack.imageProcessorFunction.functionName).toBeDefined();
+});
+
+/**
+ * Test to verify ImageProcessor Lambda Function has FinOps tags applied.
+ * This ensures cost tracking and allocation is possible through AWS Cost Explorer.
+ */
+test('ImageProcessor Lambda Function has FinOps tags applied', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // Apply the same global tags as in bin/infra.ts
+  Tags.of(app).add('Project', 'Serverless-AI-Tagger');
+  Tags.of(app).add('Owner', 'Gh0stbasta');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify the Lambda function has the required tags
+  template.hasResourceProperties('AWS::Lambda::Function', {
+    Tags: Match.arrayWith([
+      { Key: 'Owner', Value: 'Gh0stbasta' },
+      { Key: 'Project', Value: 'Serverless-AI-Tagger' },
+    ]),
+  });
+});
