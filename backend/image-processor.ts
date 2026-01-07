@@ -58,8 +58,8 @@ export const handler = async (event: S3Event, context: Context): Promise<void> =
        * 
        * Parameters:
        * - Image.S3Object: Specifies the S3 location of the image to analyze
-       * - MaxLabels: Limits the number of labels returned (10 is sufficient for most use cases)
-       * - MinConfidence: Only returns labels with confidence >= 70% to reduce false positives
+       * - MaxLabels: Limits the number of labels returned (configurable via environment variable)
+       * - MinConfidence: Only returns labels with confidence above threshold to reduce false positives
        * 
        * Cost Optimization:
        * - Each DetectLabels call costs $1 per 1,000 images
@@ -73,8 +73,8 @@ export const handler = async (event: S3Event, context: Context): Promise<void> =
             Name: key,
           },
         },
-        MaxLabels: 10,
-        MinConfidence: 70,
+        MaxLabels: parseInt(process.env.REKOGNITION_MAX_LABELS || '10', 10),
+        MinConfidence: parseFloat(process.env.REKOGNITION_MIN_CONFIDENCE || '70'),
       };
 
       const command = new DetectLabelsCommand(input);
