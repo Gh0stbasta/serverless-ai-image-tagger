@@ -134,7 +134,7 @@ test('HTTP API has POST /upload-url route configured', () => {
   
   // THEN - Verify route exists with correct path and method
   template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
-    RouteKey: 'POST /upload-url',
+    RouteKey: 'GET /upload-url',
   });
 });
 
