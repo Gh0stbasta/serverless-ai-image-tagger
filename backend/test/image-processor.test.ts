@@ -1,6 +1,7 @@
 import { S3Event, Context } from 'aws-lambda';
 import { mockClient } from 'aws-sdk-client-mock';
 import { RekognitionClient, DetectLabelsCommand, DetectLabelsCommandInput } from '@aws-sdk/client-rekognition';
+import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { handler } from '../image-processor';
 
 /**
@@ -10,13 +11,15 @@ import { handler } from '../image-processor';
  * 1. Parse S3 events correctly (including URL-encoded keys)
  * 2. Call AWS Rekognition DetectLabels API
  * 3. Process and log recognized labels in structured JSON format
- * 4. Handle errors gracefully without throwing exceptions
+ * 4. Store results in DynamoDB with correct schema
+ * 5. Handle errors gracefully without throwing exceptions
  * 
  * Mocking Strategy: Using aws-sdk-client-mock to mock AWS SDK v3 commands
  */
 
-// Create mock for RekognitionClient
+// Create mocks for AWS SDK clients
 const rekognitionMock = mockClient(RekognitionClient);
+const dynamoDbMock = mockClient(DynamoDBDocumentClient);
 
 // Mock console methods to capture logs
 let consoleLogSpy: jest.SpyInstance;
@@ -88,12 +91,15 @@ describe('ImageProcessor Lambda Handler', () => {
   beforeEach(() => {
     // Reset mocks before each test
     rekognitionMock.reset();
+    dynamoDbMock.reset();
     consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
     
     // Set default environment variables
     process.env.REKOGNITION_MAX_LABELS = '10';
     process.env.REKOGNITION_MIN_CONFIDENCE = '70';
+    process.env.TABLE_NAME = 'test-table';
+    process.env.AWS_REGION = 'us-east-1';
   });
 
   afterEach(() => {
@@ -104,6 +110,8 @@ describe('ImageProcessor Lambda Handler', () => {
     // Clean up environment variables
     delete process.env.REKOGNITION_MAX_LABELS;
     delete process.env.REKOGNITION_MIN_CONFIDENCE;
+    delete process.env.TABLE_NAME;
+    delete process.env.AWS_REGION;
   });
 
   /**
@@ -121,6 +129,7 @@ describe('ImageProcessor Lambda Handler', () => {
         { Name: 'Outdoor', Confidence: 88.2 },
       ],
     });
+    dynamoDbMock.on(PutCommand).resolves({});
 
     // WHEN
     await handler(event, context);
@@ -155,6 +164,7 @@ describe('ImageProcessor Lambda Handler', () => {
     rekognitionMock.on(DetectLabelsCommand).resolves({
       Labels: [],
     });
+    dynamoDbMock.on(PutCommand).resolves({});
 
     // WHEN
     await handler(event, context);
@@ -179,6 +189,7 @@ describe('ImageProcessor Lambda Handler', () => {
     rekognitionMock.on(DetectLabelsCommand).resolves({
       Labels: [],
     });
+    dynamoDbMock.on(PutCommand).resolves({});
 
     // WHEN
     await handler(event, context);
@@ -205,6 +216,7 @@ describe('ImageProcessor Lambda Handler', () => {
         { Name: 'Animal', Confidence: 92.7891 },
       ],
     });
+    dynamoDbMock.on(PutCommand).resolves({});
 
     // WHEN
     await handler(event, context);
@@ -250,6 +262,7 @@ describe('ImageProcessor Lambda Handler', () => {
     rekognitionMock.on(DetectLabelsCommand).resolves({
       Labels: [],
     });
+    dynamoDbMock.on(PutCommand).resolves({});
 
     // WHEN
     await handler(event, context);
@@ -268,6 +281,7 @@ describe('ImageProcessor Lambda Handler', () => {
     const context = createMockContext();
     
     rekognitionMock.on(DetectLabelsCommand).resolves({});
+    dynamoDbMock.on(PutCommand).resolves({});
 
     // WHEN
     await handler(event, context);
@@ -366,6 +380,7 @@ describe('ImageProcessor Lambda Handler', () => {
     rekognitionMock.on(DetectLabelsCommand).resolves({
       Labels: [{ Name: 'Test', Confidence: 90 }],
     });
+    dynamoDbMock.on(PutCommand).resolves({});
 
     // WHEN
     await handler(event, context);
@@ -387,6 +402,7 @@ describe('ImageProcessor Lambda Handler', () => {
     const context = createMockContext();
     
     rekognitionMock.on(DetectLabelsCommand).resolves({ Labels: [] });
+    dynamoDbMock.on(PutCommand).resolves({});
 
     // WHEN
     await handler(event, context);
@@ -408,6 +424,7 @@ describe('ImageProcessor Lambda Handler', () => {
     const context = createMockContext();
     
     rekognitionMock.on(DetectLabelsCommand).resolves({ Labels: [] });
+    dynamoDbMock.on(PutCommand).resolves({});
 
     // WHEN
     await handler(event, context);
@@ -430,6 +447,7 @@ describe('ImageProcessor Lambda Handler', () => {
     const context = createMockContext();
     
     rekognitionMock.on(DetectLabelsCommand).resolves({ Labels: [] });
+    dynamoDbMock.on(PutCommand).resolves({});
 
     // WHEN
     await handler(event, context);
@@ -455,6 +473,7 @@ describe('ImageProcessor Lambda Handler', () => {
         { Name: 'Test' }, // No Confidence property
       ],
     });
+    dynamoDbMock.on(PutCommand).resolves({});
 
     // WHEN
     await handler(event, context);
@@ -467,5 +486,137 @@ describe('ImageProcessor Lambda Handler', () => {
         confidence: 0,
       })
     );
+  });
+
+  /**
+   * Test: DynamoDB Write - Successful Storage
+   * Validates that the handler correctly stores metadata in DynamoDB
+   */
+  test('should store image metadata in DynamoDB with correct schema', async () => {
+    // GIVEN
+    const event = createS3Event('test-bucket', 'images/photo.jpg');
+    const context = createMockContext();
+    
+    rekognitionMock.on(DetectLabelsCommand).resolves({
+      Labels: [
+        { Name: 'Dog', Confidence: 95.5234 },
+        { Name: 'Outdoor', Confidence: 88.1567 },
+      ],
+    });
+    dynamoDbMock.on(PutCommand).resolves({});
+
+    // WHEN
+    await handler(event, context);
+
+    // THEN
+    expect(dynamoDbMock.calls()).toHaveLength(1);
+    const putCall = dynamoDbMock.call(0);
+    const putInput = putCall.args[0].input;
+    
+    expect(putInput.TableName).toBe('test-table');
+    expect(putInput.Item).toMatchObject({
+      imageId: 'images/photo.jpg',
+      s3Url: 'https://test-bucket.s3.us-east-1.amazonaws.com/images%2Fphoto.jpg',
+      labels: [
+        { name: 'Dog', confidence: 95.52 },
+        { name: 'Outdoor', confidence: 88.16 },
+      ],
+    });
+    expect(putInput.Item.timestamp).toBeDefined();
+    expect(typeof putInput.Item.timestamp).toBe('string');
+  });
+
+  /**
+   * Test: DynamoDB Write - Empty Labels Array
+   * Validates that the handler stores items with empty labels array when no labels detected
+   */
+  test('should store DynamoDB item with empty labels array when no labels detected', async () => {
+    // GIVEN
+    const event = createS3Event('test-bucket', 'photo.jpg');
+    const context = createMockContext();
+    
+    rekognitionMock.on(DetectLabelsCommand).resolves({ Labels: [] });
+    dynamoDbMock.on(PutCommand).resolves({});
+
+    // WHEN
+    await handler(event, context);
+
+    // THEN
+    expect(dynamoDbMock.calls()).toHaveLength(1);
+    const putCall = dynamoDbMock.call(0);
+    const putInput = putCall.args[0].input;
+    
+    expect(putInput.Item.labels).toEqual([]);
+  });
+
+  /**
+   * Test: DynamoDB Write - URL Encoding in S3 URL
+   * Validates that the handler correctly encodes special characters in S3 URLs
+   */
+  test('should correctly encode special characters in S3 URL', async () => {
+    // GIVEN
+    const event = createS3Event('test-bucket', 'my test image.jpg');
+    const context = createMockContext();
+    
+    rekognitionMock.on(DetectLabelsCommand).resolves({ Labels: [] });
+    dynamoDbMock.on(PutCommand).resolves({});
+
+    // WHEN
+    await handler(event, context);
+
+    // THEN
+    const putCall = dynamoDbMock.call(0);
+    const putInput = putCall.args[0].input;
+    
+    expect(putInput.Item.s3Url).toBe('https://test-bucket.s3.us-east-1.amazonaws.com/my%20test%20image.jpg');
+  });
+
+  /**
+   * Test: Error Handling - Missing TABLE_NAME Environment Variable
+   * Validates that the handler throws an error when TABLE_NAME is not set
+   */
+  test('should throw error when TABLE_NAME environment variable is not set', async () => {
+    // GIVEN
+    delete process.env.TABLE_NAME;
+    const event = createS3Event('test-bucket', 'photo.jpg');
+    const context = createMockContext();
+    
+    rekognitionMock.on(DetectLabelsCommand).resolves({ Labels: [] });
+
+    // WHEN
+    await handler(event, context);
+
+    // THEN - Error should be logged but not thrown (graceful handling)
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Error processing image photo.jpg:', expect.any(Error));
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Error details:', {
+      bucket: 'test-bucket',
+      key: 'photo.jpg',
+      error: 'TABLE_NAME environment variable is not set',
+    });
+  });
+
+  /**
+   * Test: Error Handling - DynamoDB PutCommand Failure
+   * Validates that the handler handles DynamoDB errors gracefully
+   */
+  test('should handle DynamoDB PutCommand errors gracefully', async () => {
+    // GIVEN
+    const event = createS3Event('test-bucket', 'photo.jpg');
+    const context = createMockContext();
+    
+    rekognitionMock.on(DetectLabelsCommand).resolves({ Labels: [] });
+    const dynamoError = new Error('ProvisionedThroughputExceededException: Request rate limit exceeded');
+    dynamoDbMock.on(PutCommand).rejects(dynamoError);
+
+    // WHEN
+    await handler(event, context);
+
+    // THEN - Should log error but not throw
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Error processing image photo.jpg:', dynamoError);
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Error details:', {
+      bucket: 'test-bucket',
+      key: 'photo.jpg',
+      error: 'ProvisionedThroughputExceededException: Request rate limit exceeded',
+    });
   });
 });

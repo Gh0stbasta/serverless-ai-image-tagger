@@ -1,5 +1,7 @@
 import { S3Event, Context } from 'aws-lambda';
 import { RekognitionClient, DetectLabelsCommand, DetectLabelsCommandInput } from '@aws-sdk/client-rekognition';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 
 /**
  * Rekognition Client
@@ -17,6 +19,20 @@ import { RekognitionClient, DetectLabelsCommand, DetectLabelsCommandInput } from
 const rekognitionClient = new RekognitionClient({});
 
 /**
+ * DynamoDB Document Client
+ * 
+ * Architectural Decision: Using DynamoDBDocumentClient instead of raw DynamoDBClient
+ * provides automatic marshalling/unmarshalling of JavaScript objects to DynamoDB format.
+ * This simplifies code by handling native JavaScript types (strings, numbers, arrays)
+ * without manual AttributeValue conversion.
+ * 
+ * Initialized outside handler for the same performance optimization reasons as
+ * RekognitionClient - enables connection pooling and client reuse across warm starts.
+ */
+const ddbClient = new DynamoDBClient({});
+const dynamoDbClient = DynamoDBDocumentClient.from(ddbClient);
+
+/**
  * ImageProcessor Lambda Function Handler
  * 
  * Architectural Decision: This Lambda function serves as the entry point for processing
@@ -27,12 +43,13 @@ const rekognitionClient = new RekognitionClient({});
  * - Extracts S3 bucket and object key from the S3 event
  * - Calls AWS Rekognition DetectLabels API to identify objects/scenes in the image
  * - Parses and logs recognized labels with confidence scores to CloudWatch
- * - Implements error handling for Rekognition API failures
+ * - Stores analysis results in DynamoDB for later retrieval
+ * - Implements error handling for Rekognition and DynamoDB API failures
  * 
  * Future Enhancements:
- * - Store results in DynamoDB
  * - Filter labels by minimum confidence threshold
  * - Implement retry logic for transient failures
+ * - Add support for batch writes to DynamoDB
  * 
  * @param event - S3Event containing details about the uploaded image
  * @param context - Lambda execution context with runtime information
@@ -106,6 +123,55 @@ export const handler = async (event: S3Event, context: Context): Promise<void> =
       } else {
         console.log(`No labels detected for image: ${key}`);
       }
+
+      /**
+       * Store Results in DynamoDB
+       * 
+       * Architectural Decision: Persist image metadata and AI-generated labels in DynamoDB
+       * for later retrieval via API. This enables the frontend to display analysis results
+       * without re-processing images.
+       * 
+       * Schema Design:
+       * - imageId: Partition key (using S3 object key for simplicity and uniqueness)
+       * - s3Url: Full S3 URL for direct access to the image
+       * - labels: Array of detected labels with confidence scores
+       * - timestamp: ISO 8601 timestamp for temporal queries and TTL support
+       * 
+       * Using PutCommand overwrites existing items with the same imageId, ensuring
+       * idempotency if the Lambda is retried. This prevents duplicate records.
+       * 
+       * Cost Impact: DynamoDB charges $1.25 per million write request units (WRUs).
+       * Each PutCommand consumes 1 WRU per 1KB of data. Free tier includes 25 WRUs/month.
+       */
+      const tableName = process.env.TABLE_NAME;
+      if (!tableName) {
+        console.error('TABLE_NAME environment variable is not set');
+        throw new Error('TABLE_NAME environment variable is not set');
+      }
+
+      const region = process.env.AWS_REGION || 'us-east-1';
+      const s3Url = `https://${bucket}.s3.${region}.amazonaws.com/${encodeURIComponent(key)}`;
+      const labels = response.Labels?.map((label) => ({
+        name: label.Name || 'Unknown',
+        confidence: label.Confidence ? parseFloat(label.Confidence.toFixed(2)) : 0,
+      })) || [];
+
+      const item = {
+        imageId: key,
+        s3Url,
+        labels,
+        timestamp: new Date().toISOString(),
+      };
+
+      console.log(`Storing metadata in DynamoDB for image: ${key}`);
+      
+      const putCommand = new PutCommand({
+        TableName: tableName,
+        Item: item,
+      });
+
+      await dynamoDbClient.send(putCommand);
+      console.log(`Successfully stored metadata for image: ${key}`);
     } catch (error) {
       /**
        * Error Handling
