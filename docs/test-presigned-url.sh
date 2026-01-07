@@ -31,7 +31,7 @@ fi
 echo ""
 echo "Step 1: Request presigned URL from Lambda"
 echo "==========================================="
-RESPONSE=$(curl -s -X POST "${API_URL}/upload-url" -H "Content-Type: application/json")
+RESPONSE=$(curl -s -X GET "${API_URL}/upload-url" -H "Content-Type: application/json")
 
 echo "Response: $RESPONSE"
 echo ""
