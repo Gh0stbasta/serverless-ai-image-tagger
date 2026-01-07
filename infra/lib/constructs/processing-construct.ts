@@ -101,7 +101,6 @@ export class ProcessingConstruct extends Construct {
      * - esbuild bundling reduces bundle size, improving cold start times and reducing billable duration.
      */
     this.imageProcessorFunction = new NodejsFunction(this, 'Function', {
-      functionName: 'ServerlessAITagger-ImageProcessor',
       description: 'Processes uploaded images and generates AI labels using AWS Rekognition',
       runtime: lambda.Runtime.NODEJS_20_X,
       architecture: lambda.Architecture.ARM_64,
