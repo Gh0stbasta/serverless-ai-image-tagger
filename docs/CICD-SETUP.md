@@ -12,7 +12,7 @@ The deploy workflow (`.github/workflows/deploy.yml`) automatically deploys infra
 
 The following secrets must be configured in your GitHub repository settings (Settings → Secrets and variables → Actions):
 
-1. **`AWS_ROLE_ARN`** (Secret)
+1. **`AWS_DEPLOY_ROLE_ARN`** (Secret)
    - Description: The ARN of the IAM role that GitHub Actions will assume using OIDC
    - Format: `arn:aws:iam::{ACCOUNT_ID}:role/{ROLE_NAME}`
    - Example: `arn:aws:iam::123456789012:role/GitHubActionsDeployRole`
@@ -111,7 +111,7 @@ The workflow sets the following environment variables for CDK:
 ## Troubleshooting
 
 ### "Error: Credentials could not be loaded"
-- Verify `AWS_ROLE_ARN` is correctly set in GitHub Secrets
+- Verify `AWS_DEPLOY_ROLE_ARN` is correctly set in GitHub Secrets
 - Verify the OIDC provider is correctly configured in AWS IAM
 - Check the IAM role's trust policy allows your repository
 
