@@ -60,7 +60,7 @@ To use OIDC authentication (recommended over long-lived access keys), you need t
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
         },
         "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:Gh0stbasta/serverless-ai-image-tagger:ref:refs/heads/main"
+          "token.actions.githubusercontent.com:sub": "repo:{OWNER}/{REPO}:ref:refs/heads/main"
         }
       }
     }
