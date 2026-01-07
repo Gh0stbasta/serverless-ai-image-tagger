@@ -76,5 +76,51 @@ export class InfraStack extends cdk.Stack {
       description: 'ARN of the IAM role for GitHub Actions deployment',
       exportName: 'GitHubActionsDeployRoleArn',
     });
+
+    /**
+     * Base IAM Role for Lambda function execution.
+     * Architectural Decision: This role provides the minimum permissions required
+     * for Lambda functions to write logs to CloudWatch. Additional permissions
+     * should be granted on a per-function basis using role.addToPolicy() or
+     * role.attachInlinePolicy() rather than adding them here.
+     * 
+     * The role uses AWSLambdaBasicExecutionRole managed policy which grants:
+     * - logs:CreateLogGroup
+     * - logs:CreateLogStream
+     * - logs:PutLogEvents
+     * 
+     * This follows the principle of least privilege by starting with minimal
+     * permissions and allowing specific functions to add only what they need.
+     * No wildcard (*) permissions are granted at this base level.
+     */
+    const lambdaExecutionRole = new iam.Role(this, 'LambdaExecutionRole', {
+      roleName: 'ServerlessAITagger-LambdaExecutionRole',
+      description: 'Base execution role for Lambda functions with CloudWatch Logs permissions only',
+      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
+      ],
+    });
+
+    // Output the Lambda execution role ARN for reference and reuse
+    new cdk.CfnOutput(this, 'LambdaExecutionRoleArn', {
+      value: lambdaExecutionRole.roleArn,
+      description: 'ARN of the base Lambda execution role (CloudWatch Logs only)',
+      exportName: 'LambdaExecutionRoleArn',
+    });
+
+    /**
+     * Export the Lambda execution role for use in other constructs.
+     * This allows Lambda functions defined elsewhere in the stack or in
+     * nested stacks to reference and use this role.
+     */
+    this.lambdaExecutionRole = lambdaExecutionRole;
   }
+
+  /**
+   * Public property to expose the Lambda execution role.
+   * This enables other constructs to reference the role and add
+   * function-specific permissions as needed.
+   */
+  public readonly lambdaExecutionRole: iam.Role;
 }

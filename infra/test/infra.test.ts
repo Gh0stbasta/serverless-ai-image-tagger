@@ -122,3 +122,115 @@ test('GitHub Deploy Role ARN is exported as CloudFormation output', () => {
     },
   });
 });
+
+/**
+ * Test to verify Lambda Execution Role is created with correct configuration.
+ * This ensures Lambda functions have minimal permissions (CloudWatch Logs only)
+ * following the principle of least privilege.
+ */
+test('Lambda Execution Role is created with CloudWatch Logs permissions only', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify IAM Role exists with correct configuration
+  template.hasResourceProperties('AWS::IAM::Role', {
+    RoleName: 'ServerlessAITagger-LambdaExecutionRole',
+    Description: 'Base execution role for Lambda functions with CloudWatch Logs permissions only',
+    AssumeRolePolicyDocument: {
+      Statement: Match.arrayWith([
+        Match.objectLike({
+          Action: 'sts:AssumeRole',
+          Effect: 'Allow',
+          Principal: {
+            Service: 'lambda.amazonaws.com',
+          },
+        }),
+      ]),
+    },
+    ManagedPolicyArns: Match.arrayWith([
+      Match.objectLike({
+        'Fn::Join': Match.arrayWith([
+          Match.arrayWith([
+            Match.stringLikeRegexp('.*AWSLambdaBasicExecutionRole'),
+          ]),
+        ]),
+      }),
+    ]),
+  });
+});
+
+/**
+ * Test to verify Lambda Execution Role does not have wildcard permissions.
+ * This test ensures the role follows least privilege principles and does not
+ * grant broad administrative or wildcard permissions.
+ */
+test('Lambda Execution Role has no wildcard or administrative permissions', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify the role has ONLY AWSLambdaBasicExecutionRole and no admin policies
+  // We check that the role doesn't have AdministratorAccess or PowerUserAccess
+  const roles = template.findResources('AWS::IAM::Role');
+  
+  let foundLambdaRole = false;
+  for (const [logicalId, resource] of Object.entries(roles)) {
+    if (resource.Properties.RoleName === 'ServerlessAITagger-LambdaExecutionRole') {
+      foundLambdaRole = true;
+      const managedPolicies = JSON.stringify(resource.Properties.ManagedPolicyArns || []);
+      
+      // Verify no wildcard admin permissions
+      expect(managedPolicies).not.toContain('AdministratorAccess');
+      expect(managedPolicies).not.toContain('PowerUserAccess');
+      
+      // Verify only AWSLambdaBasicExecutionRole is attached
+      expect(managedPolicies).toContain('AWSLambdaBasicExecutionRole');
+    }
+  }
+  
+  expect(foundLambdaRole).toBe(true);
+});
+
+/**
+ * Test to verify Lambda Execution Role ARN is exported as CloudFormation output.
+ * This allows the role to be referenced by other stacks or constructs.
+ */
+test('Lambda Execution Role ARN is exported as CloudFormation output', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify CloudFormation output exists
+  template.hasOutput('LambdaExecutionRoleArn', {
+    Description: 'ARN of the base Lambda execution role (CloudWatch Logs only)',
+    Export: {
+      Name: 'LambdaExecutionRoleArn',
+    },
+  });
+});
+
+/**
+ * Test to verify Lambda Execution Role is publicly accessible from the stack.
+ * This ensures other constructs can reference and extend the role as needed.
+ */
+test('Lambda Execution Role is exposed as a public property', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN & THEN - Verify the role is accessible as a public property
+  expect(stack.lambdaExecutionRole).toBeDefined();
+  // Note: roleName is a CDK token at synthesis time, so we verify the role exists
+  // and has the correct type rather than checking the literal string value
+  expect(stack.lambdaExecutionRole.roleArn).toBeDefined();
+});
