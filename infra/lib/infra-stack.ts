@@ -4,9 +4,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { StorageConstruct } from './constructs/storage-construct';
-import { DatabaseConstruct } from './constructs/database-construct';
-import { ProcessingConstruct } from './constructs/processing-construct';
+import { StorageConstruct, DatabaseConstruct, ProcessingConstruct } from './constructs';
 
 export class InfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
