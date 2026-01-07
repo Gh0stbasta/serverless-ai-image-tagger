@@ -1,16 +1,6 @@
 import { useState, useRef } from 'react'
+import Gallery from './Gallery'
 import './App.css'
-
-/**
- * Image metadata interface for DynamoDB items
- */
-interface ImageMetadata {
-  id: string;
-  fileName: string;
-  uploadedAt: string;
-  tags?: string[];
-  s3Key?: string;
-}
 
 /**
  * Response from the presigned URL API endpoint
@@ -22,9 +12,9 @@ interface PresignedUrlResponse {
 }
 
 function App() {
-  const [images] = useState<ImageMetadata[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploadSuccess, setUploadSuccess] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   /**
@@ -66,6 +56,10 @@ function App() {
       }
 
       console.log(`Successfully uploaded file to S3 with key: ${data.key}`)
+      
+      // Show success message to user
+      setUploadSuccess(true)
+      setTimeout(() => setUploadSuccess(false), 3000)
       
       // Reset file input to allow uploading the same file again
       if (fileInputRef.current) {
@@ -111,23 +105,10 @@ function App() {
             {isUploading ? 'Uploading...' : 'Upload Image'}
           </button>
           {error && <p className="error-message">{error}</p>}
+          {uploadSuccess && <p className="success-message">Upload successful! Processing image...</p>}
         </section>
 
-        <section className="images-section">
-          <h2>Your Images ({images.length})</h2>
-          {images.length === 0 ? (
-            <p className="empty-state">No images yet. Upload one to get started!</p>
-          ) : (
-            <div className="images-grid">
-              {images.map((image) => (
-                <div key={image.id} className="image-card">
-                  <p className="image-name">{image.fileName}</p>
-                  <p className="image-date">{new Date(image.uploadedAt).toLocaleDateString()}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+        <Gallery apiUrl={apiUrl} />
       </main>
     </div>
   )
