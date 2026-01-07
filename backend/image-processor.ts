@@ -99,7 +99,7 @@ export const handler = async (event: S3Event, context: Context): Promise<void> =
             JSON.stringify({
               image: key,
               label: label.Name,
-              confidence: label.Confidence?.toFixed(2),
+              confidence: label.Confidence ? parseFloat(label.Confidence.toFixed(2)) : 0,
             })
           );
         });
