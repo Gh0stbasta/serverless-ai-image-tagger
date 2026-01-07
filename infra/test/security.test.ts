@@ -299,6 +299,38 @@ test('Lambda has rekognition:DetectLabels permission via inline policy', () => {
 });
 
 /**
+ * Helper function to verify no wildcard permissions in policies.
+ * Checks all IAM policies in the template for forbidden wildcard patterns.
+ */
+function assertNoWildcardPermissions(
+  template: Template,
+  forbiddenPatterns: string[],
+  allowedContains?: string[]
+): void {
+  const policies = template.findResources('AWS::IAM::Policy');
+  
+  for (const [logicalId, resource] of Object.entries(policies)) {
+    const policyDoc = JSON.stringify(resource.Properties.PolicyDocument);
+    
+    // Check for forbidden patterns
+    for (const pattern of forbiddenPatterns) {
+      expect(policyDoc).not.toContain(pattern);
+    }
+    
+    // If allowed patterns are specified, verify they exist when relevant
+    if (allowedContains) {
+      for (const allowed of allowedContains) {
+        // Only check if the service is mentioned in the policy
+        const serviceName = allowed.split(':')[0];
+        if (policyDoc.includes(serviceName)) {
+          expect(policyDoc).toContain(allowed);
+        }
+      }
+    }
+  }
+}
+
+/**
  * Test to verify Lambda does NOT have wildcard Rekognition permissions.
  * This ensures we're following least privilege by granting only DetectLabels.
  */
@@ -309,20 +341,13 @@ test('Lambda does NOT have wildcard Rekognition permissions', () => {
   
   // WHEN
   const template = Template.fromStack(stack);
-  const policies = template.findResources('AWS::IAM::Policy');
   
   // THEN - Verify no policy contains rekognition:* or wildcard actions
-  for (const [logicalId, resource] of Object.entries(policies)) {
-    const policyDoc = JSON.stringify(resource.Properties.PolicyDocument);
-    
-    // Should not have rekognition:* or *:*
-    expect(policyDoc).not.toContain('rekognition:*');
-    
-    // Verify if rekognition is mentioned, it's only DetectLabels
-    if (policyDoc.includes('rekognition')) {
-      expect(policyDoc).toContain('rekognition:DetectLabels');
-    }
-  }
+  assertNoWildcardPermissions(
+    template,
+    ['rekognition:*'],
+    ['rekognition:DetectLabels']
+  );
 });
 
 /**
@@ -336,15 +361,10 @@ test('Lambda does NOT have wildcard S3 or DynamoDB permissions', () => {
   
   // WHEN
   const template = Template.fromStack(stack);
-  const policies = template.findResources('AWS::IAM::Policy');
   
   // THEN - Verify no policy contains s3:* or dynamodb:* actions
-  for (const [logicalId, resource] of Object.entries(policies)) {
-    const policyDoc = JSON.stringify(resource.Properties.PolicyDocument);
-    
-    // Should not have s3:* or dynamodb:*
-    expect(policyDoc).not.toContain('"s3:*"');
-    expect(policyDoc).not.toContain('"dynamodb:*"');
-    expect(policyDoc).not.toContain('"Action":"*"');
-  }
+  assertNoWildcardPermissions(
+    template,
+    ['"s3:*"', '"dynamodb:*"', '"Action":"*"']
+  );
 });
