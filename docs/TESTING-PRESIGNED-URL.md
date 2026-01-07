@@ -17,7 +17,7 @@ We provide a bash script to test the entire flow:
 API_URL=$(cd infra && npx cdk deploy --outputs-file outputs.json && jq -r '.InfraStack.HttpApiUrl' outputs.json)
 
 # Run the test script
-/tmp/test-presigned-url.sh "$API_URL" /path/to/your/image.jpg
+./docs/test-presigned-url.sh "$API_URL" /path/to/your/image.jpg
 ```
 
 If you don't specify an image file, the script will create a minimal test JPEG.
