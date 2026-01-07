@@ -201,3 +201,170 @@ test('Lambda Execution Role is exposed as a public property', () => {
   // and has the correct type rather than checking the literal string value
   expect(stack.lambdaExecutionRole.roleArn).toBeDefined();
 });
+
+/**
+ * Test to verify Lambda has precise S3 read permissions via CDK grant.
+ * This ensures the Lambda can read from the S3 bucket without wildcard permissions.
+ */
+test('Lambda has S3 read permissions granted via bucket.grantRead()', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify S3 read policy is attached to Lambda role
+  template.hasResourceProperties('AWS::IAM::Policy', {
+    PolicyDocument: {
+      Statement: Match.arrayWith([
+        Match.objectLike({
+          Action: Match.arrayWith(['s3:GetObject*', 's3:GetBucket*', 's3:List*']),
+          Effect: 'Allow',
+          Resource: Match.arrayWith([
+            Match.objectLike({
+              'Fn::GetAtt': Match.arrayWith([
+                Match.stringLikeRegexp('Upload.*'),
+                'Arn',
+              ]),
+            }),
+          ]),
+        }),
+      ]),
+    },
+  });
+});
+
+/**
+ * Test to verify Lambda has precise DynamoDB write permissions via CDK grant.
+ * This ensures the Lambda can write to the DynamoDB table without wildcard permissions.
+ */
+test('Lambda has DynamoDB write permissions granted via table.grantWriteData()', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify DynamoDB write policy is attached to Lambda role
+  // Note: grantWriteData also includes DescribeTable for the Lambda to verify table status
+  template.hasResourceProperties('AWS::IAM::Policy', {
+    PolicyDocument: {
+      Statement: Match.arrayWith([
+        Match.objectLike({
+          Action: Match.arrayWith([
+            'dynamodb:BatchWriteItem',
+            'dynamodb:PutItem',
+            'dynamodb:UpdateItem',
+            'dynamodb:DeleteItem',
+          ]),
+          Effect: 'Allow',
+          Resource: Match.objectLike({
+            'Fn::GetAtt': Match.arrayWith([
+              Match.stringLikeRegexp('ImageMetadata.*'),
+              'Arn',
+            ]),
+          }),
+        }),
+      ]),
+    },
+  });
+});
+
+/**
+ * Test to verify Lambda has Rekognition DetectLabels permission via inline policy.
+ * This ensures the Lambda can perform AI image analysis without excessive permissions.
+ */
+test('Lambda has rekognition:DetectLabels permission via inline policy', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify Rekognition DetectLabels policy is attached to Lambda role
+  template.hasResourceProperties('AWS::IAM::Policy', {
+    PolicyDocument: {
+      Statement: Match.arrayWith([
+        Match.objectLike({
+          Action: 'rekognition:DetectLabels',
+          Effect: 'Allow',
+          Resource: '*',
+        }),
+      ]),
+    },
+  });
+});
+
+/**
+ * Helper function to verify no wildcard permissions in policies.
+ * Checks all IAM policies in the template for forbidden wildcard patterns.
+ */
+function assertNoWildcardPermissions(
+  template: Template,
+  forbiddenPatterns: string[],
+  allowedContains?: string[]
+): void {
+  const policies = template.findResources('AWS::IAM::Policy');
+  
+  for (const [logicalId, resource] of Object.entries(policies)) {
+    const policyDoc = JSON.stringify(resource.Properties.PolicyDocument);
+    
+    // Check for forbidden patterns
+    for (const pattern of forbiddenPatterns) {
+      expect(policyDoc).not.toContain(pattern);
+    }
+    
+    // If allowed patterns are specified, verify they exist when relevant
+    if (allowedContains) {
+      for (const allowed of allowedContains) {
+        // Only check if the service is mentioned in the policy
+        const serviceName = allowed.split(':')[0];
+        if (policyDoc.includes(serviceName)) {
+          expect(policyDoc).toContain(allowed);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Test to verify Lambda does NOT have wildcard Rekognition permissions.
+ * This ensures we're following least privilege by granting only DetectLabels.
+ */
+test('Lambda does NOT have wildcard Rekognition permissions', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify no policy contains rekognition:* or wildcard actions
+  assertNoWildcardPermissions(
+    template,
+    ['rekognition:*'],
+    ['rekognition:DetectLabels']
+  );
+});
+
+/**
+ * Test to verify Lambda does NOT have wildcard S3 or DynamoDB permissions.
+ * This ensures we're using precise CDK grants, not wildcard permissions.
+ */
+test('Lambda does NOT have wildcard S3 or DynamoDB permissions', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify no policy contains s3:* or dynamodb:* actions
+  assertNoWildcardPermissions(
+    template,
+    ['"s3:*"', '"dynamodb:*"', '"Action":"*"']
+  );
+});

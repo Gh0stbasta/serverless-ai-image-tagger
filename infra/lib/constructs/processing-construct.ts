@@ -150,6 +150,32 @@ export class ProcessingConstruct extends Construct {
     props.table.grantWriteData(this.imageProcessorFunction);
 
     /**
+     * IAM Permissions: Grant Lambda access to AWS Rekognition.
+     * Architectural Decision: Using an inline IAM policy to grant only the specific
+     * rekognition:DetectLabels action required for AI-powered image tagging.
+     * 
+     * This follows the principle of least privilege by:
+     * - Granting only the DetectLabels action (not all Rekognition actions)
+     * - Scoping to all resources (Resource: "*") as Rekognition doesn't support
+     *   resource-level permissions for DetectLabels
+     * 
+     * Note: While Resource: "*" is used, the action is tightly scoped to only
+     * rekognition:DetectLabels, which is the minimum permission needed for the
+     * image tagging functionality. This is an AWS service limitation, not a
+     * violation of least privilege principles.
+     * 
+     * Cost Impact: Rekognition DetectLabels pricing is $1 per 1,000 images analyzed.
+     * Free tier includes 5,000 images/month for the first 12 months.
+     */
+    this.imageProcessorFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['rekognition:DetectLabels'],
+        resources: ['*'],
+      })
+    );
+
+    /**
      * S3 Event Notification: Wire Lambda to S3 bucket events.
      * Architectural Decision: The ProcessingConstruct is responsible for wiring itself to its
      * event sources, following ADR-005's principle of encapsulation. Since this construct
