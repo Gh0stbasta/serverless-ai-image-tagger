@@ -99,6 +99,7 @@ describe('ImageProcessor Lambda Handler', () => {
     process.env.REKOGNITION_MAX_LABELS = '10';
     process.env.REKOGNITION_MIN_CONFIDENCE = '70';
     process.env.TABLE_NAME = 'test-table';
+    process.env.AWS_REGION = 'us-east-1';
   });
 
   afterEach(() => {
@@ -110,6 +111,7 @@ describe('ImageProcessor Lambda Handler', () => {
     delete process.env.REKOGNITION_MAX_LABELS;
     delete process.env.REKOGNITION_MIN_CONFIDENCE;
     delete process.env.TABLE_NAME;
+    delete process.env.AWS_REGION;
   });
 
   /**
