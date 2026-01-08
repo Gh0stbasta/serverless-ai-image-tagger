@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { fetchImages as fetchImagesFromAPI } from './services/apiService'
 import type { ImageItem } from './types'
 import './Gallery.css'
 
@@ -34,22 +35,16 @@ function Gallery({ apiUrl }: GalleryProps) {
   /**
    * Fetches images from the backend API
    * 
-   * Architectural Decision: Use useEffect with empty dependency array to fetch on mount.
-   * This ensures data is loaded when the component first renders.
+   * Architectural Decision: Use the centralized apiService for data fetching.
+   * This ensures consistent error handling and makes it easier to mock in tests.
    */
   useEffect(() => {
-    const fetchImages = async () => {
+    const loadImages = async () => {
       setIsLoading(true)
       setError(null)
 
       try {
-        const response = await fetch(`${apiUrl}/images`)
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch images: ${response.status} ${response.statusText}`)
-        }
-
-        const data: ImageItem[] = await response.json()
+        const data = await fetchImagesFromAPI(apiUrl)
         setImages(data)
       } catch (err) {
         console.error('Error fetching images:', err)
@@ -59,7 +54,7 @@ function Gallery({ apiUrl }: GalleryProps) {
       }
     }
 
-    fetchImages()
+    loadImages()
   }, [apiUrl])
 
   /**
