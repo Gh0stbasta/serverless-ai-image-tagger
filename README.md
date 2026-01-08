@@ -118,14 +118,8 @@ graph TB
 
 ### Prerequisites
 
-**Option A: Using DevContainer (Recommended)**
 * Docker Desktop installed and running
 * VS Code with the "Dev Containers" extension
-
-**Option B: Manual Setup**
-* Node.js 20.x or later
-* AWS CLI v2
-* AWS CDK CLI (`npm install -g aws-cdk`)
 
 ---
 
@@ -155,7 +149,7 @@ The **DevContainer** provides a pre-configured development environment with all 
 
 ---
 
-### Deployment Steps
+### Deployment to AWS
 
 1.  **Configure AWS Credentials:**
     
@@ -180,12 +174,12 @@ The **DevContainer** provides a pre-configured development environment with all 
 
 3.  **Install Dependencies:**
     ```bash
-    npm install
+    npm run install-all
     ```
 
 4.  **Deploy the Stack:**
     ```bash
-    cdk deploy
+    npm run deploy
     ```
     
     * Review the IAM and security changes when prompted
@@ -198,22 +192,6 @@ The **DevContainer** provides a pre-configured development environment with all 
     * **ApiEndpoint:** Your API Gateway URL
     * **WebsiteURL:** Your CloudFront distribution URL
     * **ImageBucket:** Your S3 bucket name
-
----
-
-### Build Frontend Locally (Optional)
-
-To test the React frontend in development mode:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-The app will be available at `http://localhost:5173`.
-
-**Note:** You'll need to update `frontend/src/config.ts` with your deployed API Gateway endpoint URL.
 
 ---
 
