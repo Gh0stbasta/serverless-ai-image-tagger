@@ -23,19 +23,25 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          # Nutzt alle drei Lock-Files für einen präzisen Cache-Hash
           cache-dependency-path: |
             infra/package-lock.json
             backend/package-lock.json
             frontend/package-lock.json
 
       - name: Install all dependencies
+        # Führt dein Root-Script aus, um alle Sub-Ordner zu versorgen
         run: npm run install-all
 
       - name: Run all tests (Monorepo)
+        # Quality Gate: Bricht ab, falls einer der 125+ Tests fehlschlägt
         run: npm run test
 
       - name: Build Frontend
+        # WICHTIG: Injiziert die API-URL aus den GitHub Secrets in den Vite-Build
         run: npm run build --prefix frontend
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
