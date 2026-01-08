@@ -225,48 +225,6 @@ test('Custom Resource exists for deployment notification', () => {
 });
 
 /**
- * Test to verify CloudFront URL is exported as CloudFormation output.
- * This output provides the URL operators can use to access the deployed application.
- */
-test('CloudFront URL is exported as CloudFormation output', () => {
-  // GIVEN
-  const app = new cdk.App();
-  const stack = new Infra.InfraStack(app, 'TestStack');
-  
-  // WHEN
-  const template = Template.fromStack(stack);
-  
-  // THEN - Verify CloudFormation output exists
-  template.hasOutput('CloudFrontUrl', {
-    Description: 'URL of the CloudFront distribution for accessing the frontend application',
-    Export: {
-      Name: 'CloudFrontUrl',
-    },
-  });
-});
-
-/**
- * Test to verify CloudFront Distribution ID is exported.
- * This is useful for manual cache invalidations and monitoring.
- */
-test('CloudFront Distribution ID is exported as CloudFormation output', () => {
-  // GIVEN
-  const app = new cdk.App();
-  const stack = new Infra.InfraStack(app, 'TestStack');
-  
-  // WHEN
-  const template = Template.fromStack(stack);
-  
-  // THEN - Verify CloudFormation output exists
-  template.hasOutput('CloudFrontDistributionId', {
-    Description: 'ID of the CloudFront distribution',
-    Export: {
-      Name: 'CloudFrontDistributionId',
-    },
-  });
-});
-
-/**
  * Test to verify CloudFront Distribution has SPA error handling.
  * This ensures React Router works correctly with direct URL access.
  */

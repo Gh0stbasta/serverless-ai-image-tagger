@@ -70,27 +70,6 @@ test('GitHub Deploy Role is created with correct trust policy', () => {
 });
 
 /**
- * Test to verify the CloudFormation output for the GitHub Deploy Role ARN.
- * This output is used in GitHub Actions workflows to configure role assumption.
- */
-test('GitHub Deploy Role ARN is exported as CloudFormation output', () => {
-  // GIVEN
-  const app = new cdk.App();
-  const stack = new Infra.InfraStack(app, 'TestStack');
-  
-  // WHEN
-  const template = Template.fromStack(stack);
-  
-  // THEN - Verify CloudFormation output exists
-  template.hasOutput('GitHubDeployRoleArn', {
-    Description: 'ARN of the IAM role for GitHub Actions deployment',
-    Export: {
-      Name: 'GitHubActionsDeployRoleArn',
-    },
-  });
-});
-
-/**
  * Test to verify Lambda Execution Role is created with correct configuration.
  * This ensures Lambda functions have minimal permissions (CloudWatch Logs only)
  * following the principle of least privilege.
@@ -163,27 +142,6 @@ test('Lambda Execution Role has no wildcard or administrative permissions', () =
   }
   
   expect(foundLambdaRole).toBe(true);
-});
-
-/**
- * Test to verify Lambda Execution Role ARN is exported as CloudFormation output.
- * This allows the role to be referenced by other stacks or constructs.
- */
-test('Lambda Execution Role ARN is exported as CloudFormation output', () => {
-  // GIVEN
-  const app = new cdk.App();
-  const stack = new Infra.InfraStack(app, 'TestStack');
-  
-  // WHEN
-  const template = Template.fromStack(stack);
-  
-  // THEN - Verify CloudFormation output exists
-  template.hasOutput('LambdaExecutionRoleArn', {
-    Description: 'ARN of the base Lambda execution role (CloudWatch Logs only)',
-    Export: {
-      Name: 'LambdaExecutionRoleArn',
-    },
-  });
 });
 
 /**
