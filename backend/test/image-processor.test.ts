@@ -100,6 +100,7 @@ describe('ImageProcessor Lambda Handler', () => {
     process.env.REKOGNITION_MIN_CONFIDENCE = '70';
     process.env.TABLE_NAME = 'test-table';
     process.env.AWS_REGION = 'us-east-1';
+    process.env.CLOUDFRONT_DOMAIN = 'd1234567890.cloudfront.net';
   });
 
   afterEach(() => {
@@ -112,6 +113,7 @@ describe('ImageProcessor Lambda Handler', () => {
     delete process.env.REKOGNITION_MIN_CONFIDENCE;
     delete process.env.TABLE_NAME;
     delete process.env.AWS_REGION;
+    delete process.env.CLOUDFRONT_DOMAIN;
   });
 
   /**
@@ -516,7 +518,7 @@ describe('ImageProcessor Lambda Handler', () => {
     expect(putInput.TableName).toBe('test-table');
     expect(putInput.Item).toMatchObject({
       imageId: 'images/photo.jpg',
-      s3Url: 'https://test-bucket.s3.us-east-1.amazonaws.com/images%2Fphoto.jpg',
+      s3Url: 'https://d1234567890.cloudfront.net/images%2Fphoto.jpg',
       labels: [
         { name: 'Dog', confidence: 95.52 },
         { name: 'Outdoor', confidence: 88.16 },
@@ -550,10 +552,10 @@ describe('ImageProcessor Lambda Handler', () => {
   });
 
   /**
-   * Test: DynamoDB Write - URL Encoding in S3 URL
-   * Validates that the handler correctly encodes special characters in S3 URLs
+   * Test: DynamoDB Write - URL Encoding in CloudFront URL
+   * Validates that the handler correctly encodes special characters in CloudFront URLs
    */
-  test('should correctly encode special characters in S3 URL', async () => {
+  test('should correctly encode special characters in CloudFront URL', async () => {
     // GIVEN
     const event = createS3Event('test-bucket', 'my test image.jpg');
     const context = createMockContext();
@@ -568,7 +570,7 @@ describe('ImageProcessor Lambda Handler', () => {
     const putCall = dynamoDbMock.call(0);
     const putInput = putCall.args[0].input;
     
-    expect(putInput.Item.s3Url).toBe('https://test-bucket.s3.us-east-1.amazonaws.com/my%20test%20image.jpg');
+    expect(putInput.Item.s3Url).toBe('https://d1234567890.cloudfront.net/my%20test%20image.jpg');
   });
 
   /**
