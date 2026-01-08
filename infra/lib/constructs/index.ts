@@ -19,3 +19,7 @@ export { ProcessingConstruct } from './processing-construct';
 export type { ProcessingProps } from './processing-construct';
 export { ApiConstruct } from './api-construct';
 export type { ApiProps } from './api-construct';
+export { HostingConstruct } from './hosting-construct';
+export type { HostingConstructProps } from './hosting-construct';
+export { NotificationConstruct } from './notification-construct';
+export type { NotificationConstructProps } from './notification-construct';

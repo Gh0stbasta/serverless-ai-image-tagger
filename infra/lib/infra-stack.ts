@@ -4,8 +4,10 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
+import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as sns from 'aws-cdk-lib/aws-sns';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { StorageConstruct, DatabaseConstruct, ProcessingConstruct, ApiConstruct } from './constructs';
+import { StorageConstruct, DatabaseConstruct, ProcessingConstruct, ApiConstruct, HostingConstruct, NotificationConstruct } from './constructs';
 
 export class InfraStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -276,6 +278,72 @@ export class InfraStack extends cdk.Stack {
       description: 'ARN of the GeneratePresignedUrl Lambda function',
       exportName: 'GeneratePresignedUrlFunctionArn',
     });
+
+    /**
+     * Hosting Layer: CloudFront and S3 for production frontend hosting.
+     * Architectural Decision: Using HostingConstruct to encapsulate all hosting
+     * resources following ADR-005. This provides:
+     * - Private S3 bucket for static assets
+     * - CloudFront distribution with Origin Access Control (OAC)
+     * - Automatic deployment and cache invalidation
+     * 
+     * The hosting construct ensures that:
+     * - All traffic is served over HTTPS
+     * - S3 bucket is not directly accessible (403 Forbidden)
+     * - CloudFront cache is invalidated on every deployment
+     * - SPA routing works correctly with 404 -> index.html handling
+     */
+    const hosting = new HostingConstruct(this, 'Hosting');
+    this.distribution = hosting.distribution;
+    this.hostingBucket = hosting.hostingBucket;
+
+    /**
+     * Notification Layer: SNS and Custom Resource for deployment notifications.
+     * Architectural Decision: Using NotificationConstruct to send email notifications
+     * after successful deployments. This improves DX by providing immediate feedback.
+     * 
+     * The notification email is retrieved from CDK context or environment variable.
+     * If not provided, a default is used (though operators should configure this).
+     * 
+     * The custom resource depends on the bucket deployment to ensure notifications
+     * are sent only after the entire deployment completes successfully.
+     */
+    const notificationEmail = this.node.tryGetContext('notificationEmail') 
+      || process.env.NOTIFICATION_EMAIL 
+      || 'devops@example.com'; // Default - should be overridden
+
+    const notification = new NotificationConstruct(this, 'Notification', {
+      notificationEmail,
+      cloudfrontDomainName: hosting.distribution.distributionDomainName,
+      deploymentDependencies: [hosting.bucketDeployment],
+    });
+    this.deploymentTopic = notification.topic;
+
+    // CloudFormation Outputs for Hosting Resources
+    
+    new cdk.CfnOutput(this, 'CloudFrontUrl', {
+      value: `https://${hosting.distribution.distributionDomainName}`,
+      description: 'URL of the CloudFront distribution for accessing the frontend application',
+      exportName: 'CloudFrontUrl',
+    });
+
+    new cdk.CfnOutput(this, 'CloudFrontDistributionId', {
+      value: hosting.distribution.distributionId,
+      description: 'ID of the CloudFront distribution',
+      exportName: 'CloudFrontDistributionId',
+    });
+
+    new cdk.CfnOutput(this, 'HostingBucketName', {
+      value: hosting.hostingBucket.bucketName,
+      description: 'Name of the S3 bucket for frontend static assets',
+      exportName: 'HostingBucketName',
+    });
+
+    new cdk.CfnOutput(this, 'DeploymentTopicArn', {
+      value: notification.topic.topicArn,
+      description: 'ARN of the SNS topic for deployment notifications',
+      exportName: 'DeploymentTopicArn',
+    });
   }
 
   /**
@@ -338,4 +406,31 @@ export class InfraStack extends cdk.Stack {
    * - Set up monitoring and alarms
    */
   public readonly generatePresignedUrlFunction: NodejsFunction;
+
+  /**
+   * Public property to expose the CloudFront distribution.
+   * This enables other constructs to:
+   * - Reference the distribution for invalidations
+   * - Configure custom domains
+   * - Set up monitoring and alarms
+   */
+  public readonly distribution: cloudfront.Distribution;
+
+  /**
+   * Public property to expose the hosting S3 bucket.
+   * This enables other constructs to:
+   * - Reference the bucket for deployments
+   * - Grant IAM permissions
+   * - Configure additional bucket settings
+   */
+  public readonly hostingBucket: s3.Bucket;
+
+  /**
+   * Public property to expose the deployment SNS topic.
+   * This enables other constructs to:
+   * - Subscribe additional endpoints
+   * - Publish custom notifications
+   * - Reference the topic ARN
+   */
+  public readonly deploymentTopic: sns.Topic;
 }
