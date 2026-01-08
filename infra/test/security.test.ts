@@ -326,3 +326,116 @@ test('Lambda does NOT have wildcard S3 or DynamoDB permissions', () => {
     ['"s3:*"', '"dynamodb:*"', '"Action":"*"']
   );
 });
+
+/**
+ * Test to verify DeleteImage Lambda has S3 delete permissions.
+ * This ensures the Lambda can delete objects from S3 when users delete images.
+ * 
+ * Architectural Decision: Using bucket.grantDelete() to grant only s3:DeleteObject
+ * permission, following the principle of least privilege. The Lambda should not
+ * have wildcard (*) permissions on S3.
+ */
+test('DeleteImage Lambda has S3 delete permissions granted via bucket.grantDelete()', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify S3 delete policy is attached to DeleteImage Lambda role
+  template.hasResourceProperties('AWS::IAM::Policy', {
+    PolicyDocument: {
+      Statement: Match.arrayWith([
+        Match.objectLike({
+          Action: 's3:DeleteObject*',
+          Effect: 'Allow',
+          Resource: Match.objectLike({
+            'Fn::Join': Match.arrayWith([
+              Match.arrayWith([
+                Match.objectLike({
+                  'Fn::GetAtt': Match.arrayWith([
+                    Match.stringLikeRegexp('Upload.*'),
+                    'Arn',
+                  ]),
+                }),
+                '/*',
+              ]),
+            ]),
+          }),
+        }),
+      ]),
+    },
+  });
+});
+
+/**
+ * Test to verify DeleteImage Lambda has DynamoDB delete permissions.
+ * This ensures the Lambda can delete items from DynamoDB when users delete images.
+ * 
+ * Architectural Decision: Using table.grantWriteData() to grant DynamoDB write
+ * permissions (including DeleteItem), following the principle of least privilege.
+ * The Lambda should not have wildcard (*) permissions on DynamoDB.
+ */
+test('DeleteImage Lambda has DynamoDB delete permissions granted via table.grantWriteData()', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify DynamoDB write policy (includes DeleteItem) is attached
+  template.hasResourceProperties('AWS::IAM::Policy', {
+    PolicyDocument: {
+      Statement: Match.arrayWith([
+        Match.objectLike({
+          Action: Match.arrayWith([
+            'dynamodb:BatchWriteItem',
+            'dynamodb:PutItem',
+            'dynamodb:UpdateItem',
+            'dynamodb:DeleteItem',
+          ]),
+          Effect: 'Allow',
+          Resource: Match.objectLike({
+            'Fn::GetAtt': Match.arrayWith([
+              Match.stringLikeRegexp('ImageMetadata.*'),
+              'Arn',
+            ]),
+          }),
+        }),
+      ]),
+    },
+  });
+});
+
+/**
+ * Test to verify DeleteImage Lambda function is created with correct configuration.
+ * This ensures the Lambda has the necessary environment variables and configuration.
+ */
+test('DeleteImage Lambda function is created with correct environment variables', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify Lambda function exists with correct configuration
+  template.hasResourceProperties('AWS::Lambda::Function', {
+    Description: 'Deletes images from S3 and DynamoDB when user removes them from the gallery',
+    Runtime: 'nodejs20.x',
+    Timeout: 30,
+    MemorySize: 256,
+    Environment: {
+      Variables: {
+        BUCKET_NAME: Match.objectLike({
+          Ref: Match.stringLikeRegexp('Upload.*'),
+        }),
+        TABLE_NAME: Match.objectLike({
+          Ref: Match.stringLikeRegexp('ImageMetadata.*'),
+        }),
+      },
+    },
+  });
+});

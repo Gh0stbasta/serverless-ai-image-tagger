@@ -178,3 +178,72 @@ test('HTTP API has FinOps tags applied', () => {
     },
   });
 });
+
+/**
+ * Test to verify HTTP API has DELETE /images/{imageId} route configured.
+ * This route is used to delete images from S3 and DynamoDB.
+ */
+test('HTTP API has DELETE /images/{imageId} route configured', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify route exists with correct path and method
+  template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
+    RouteKey: 'DELETE /images/{imageId}',
+  });
+});
+
+/**
+ * Test to verify DeleteImage Lambda has permission to be invoked by API Gateway.
+ * This permission is necessary for the API Gateway to invoke the Lambda function.
+ */
+test('DeleteImage Lambda has permission to be invoked by API Gateway', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify Lambda permission for API Gateway invocation exists
+  const permissions = template.findResources('AWS::Lambda::Permission', {
+    Properties: {
+      Action: 'lambda:InvokeFunction',
+      Principal: 'apigateway.amazonaws.com',
+      FunctionName: Match.objectLike({
+        'Fn::GetAtt': Match.arrayWith([
+          Match.stringLikeRegexp('DeleteImageFunction'),
+        ]),
+      }),
+    },
+  });
+  
+  // At least one permission should exist for DeleteImage
+  expect(Object.keys(permissions).length).toBeGreaterThan(0);
+});
+
+/**
+ * Test to verify HTTP API CORS configuration includes DELETE method.
+ * This ensures the frontend can make DELETE requests from any origin.
+ */
+test('HTTP API CORS configuration includes DELETE method', () => {
+  // GIVEN
+  const app = new cdk.App();
+  const stack = new Infra.InfraStack(app, 'TestStack');
+  
+  // WHEN
+  const template = Template.fromStack(stack);
+  
+  // THEN - Verify CORS configuration includes DELETE
+  template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
+    CorsConfiguration: {
+      AllowOrigins: ['*'],
+      AllowMethods: Match.arrayWith(['DELETE']),
+      AllowHeaders: ['Content-Type'],
+    },
+  });
+});
