@@ -501,6 +501,10 @@ export class ApiConstruct extends Construct {
      * - DELETE /images/uploads/photo.jpg → imageId = 'uploads/photo.jpg'
      * - DELETE /images/path/to/nested/file.jpg → imageId = 'path/to/nested/file.jpg'
      * 
+     * Note: The Lambda handler receives the imageId as a URL-decoded value. For example,
+     * a request to '/images/uploads%2Fphoto.jpg' will have imageId = 'uploads/photo.jpg'
+     * in the path parameters, which must then be decoded using decodeURIComponent().
+     * 
      * Security Considerations:
      * - Future: Add authentication using API Gateway authorizers
      * - Future: Rate limiting to prevent abuse

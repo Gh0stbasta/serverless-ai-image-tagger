@@ -190,8 +190,8 @@ describe('DeleteImage Lambda Handler', () => {
    */
   test('should handle imageId with slashes (e.g., uploads/123.jpg)', async () => {
     // GIVEN
-    const encodedImageId = 'uploads%2F123.jpg';  // URL-encoded slash
     const decodedImageId = 'uploads/123.jpg';
+    const encodedImageId = encodeURIComponent(decodedImageId);
     const event = createDeleteApiEvent(encodedImageId);
     const context = createMockContext();
     
