@@ -108,8 +108,9 @@ describe('App Component', () => {
 
       render(<App />)
 
+      const expectedApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith('http://localhost:3000/images')
+        expect(mockFetch).toHaveBeenCalledWith(`${expectedApiUrl}/images`)
       })
     })
   })
@@ -196,7 +197,8 @@ describe('App Component', () => {
       })
       
       // Verify presigned URL was fetched (2nd call, after Gallery)
-      expect(mockFetch).toHaveBeenNthCalledWith(2, 'http://localhost:3000/upload-url')
+      const expectedApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+      expect(mockFetch).toHaveBeenNthCalledWith(2, `${expectedApiUrl}/upload-url`)
       
       // Verify file was uploaded to S3 (3rd call)
       expect(mockFetch).toHaveBeenNthCalledWith(3, 'https://s3.amazonaws.com/test-bucket/test-key', {
