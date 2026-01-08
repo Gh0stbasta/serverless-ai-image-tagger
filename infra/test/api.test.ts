@@ -182,8 +182,12 @@ test('HTTP API has FinOps tags applied', () => {
 /**
  * Test to verify HTTP API has DELETE /images/{imageId} route configured.
  * This route is used to delete images from S3 and DynamoDB.
+ * 
+ * IMPORTANT: The route uses a greedy path parameter ({imageId+}) to capture
+ * S3 object keys that contain slashes (e.g., 'uploads/123.jpg').
+ * Without the '+', API Gateway would only capture the first path segment.
  */
-test('HTTP API has DELETE /images/{imageId} route configured', () => {
+test('HTTP API has DELETE /images/{imageId+} route configured with greedy path parameter', () => {
   // GIVEN
   const app = new cdk.App();
   const stack = new Infra.InfraStack(app, 'TestStack');
@@ -191,9 +195,9 @@ test('HTTP API has DELETE /images/{imageId} route configured', () => {
   // WHEN
   const template = Template.fromStack(stack);
   
-  // THEN - Verify route exists with correct path and method
+  // THEN - Verify route exists with greedy path parameter (+)
   template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
-    RouteKey: 'DELETE /images/{imageId}',
+    RouteKey: 'DELETE /images/{imageId+}',
   });
 });
 
