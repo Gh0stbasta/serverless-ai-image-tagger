@@ -6,6 +6,9 @@ import App from './App'
 const mockFetch = vi.fn()
 globalThis.fetch = mockFetch
 
+// Helper function to get the expected API URL (matches App.tsx behavior)
+const getExpectedApiUrl = () => import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 describe('App Component', () => {
   beforeEach(() => {
     mockFetch.mockClear()
@@ -109,7 +112,7 @@ describe('App Component', () => {
       render(<App />)
 
       await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith('http://localhost:3000/images')
+        expect(mockFetch).toHaveBeenCalledWith(`${getExpectedApiUrl()}/images`)
       })
     })
   })
@@ -196,7 +199,7 @@ describe('App Component', () => {
       })
       
       // Verify presigned URL was fetched (2nd call, after Gallery)
-      expect(mockFetch).toHaveBeenNthCalledWith(2, 'http://localhost:3000/upload-url')
+      expect(mockFetch).toHaveBeenNthCalledWith(2, `${getExpectedApiUrl()}/upload-url`)
       
       // Verify file was uploaded to S3 (3rd call)
       expect(mockFetch).toHaveBeenNthCalledWith(3, 'https://s3.amazonaws.com/test-bucket/test-key', {
