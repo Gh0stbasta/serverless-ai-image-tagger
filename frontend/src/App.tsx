@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import Gallery from './Gallery'
+import InfoBox from './InfoBox'
 import { getPresignedUrl, uploadImageToS3 } from './services/apiService'
 import './App.css'
 
@@ -70,6 +71,8 @@ function App() {
       </header>
 
       <main className="app-main">
+        <InfoBox />
+        
         <section className="upload-section">
           <input
             ref={fileInputRef}

@@ -1,17 +1,23 @@
 import * as cdk from 'aws-cdk-lib/core';
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 
 /**
  * StorageConstruct
  * 
  * Architectural Decision: Encapsulates S3 storage resources following ADR-005.
- * This construct manages the S3 bucket for image uploads, isolating all storage
- * configuration details from the main stack. This follows the Single Responsibility
- * Principle and makes the storage layer independently testable and reusable.
+ * This construct manages the S3 bucket for image uploads and a CloudFront distribution
+ * for serving those images globally with low latency and HTTPS. This ensures uploaded
+ * images are accessible to users while maintaining S3 bucket security (no public access).
  * 
- * The construct exposes the bucket as a public property, allowing other constructs
- * to reference it for IAM permissions, event notifications, or presigned URL generation.
+ * The construct exposes the bucket and CloudFront distribution as public properties,
+ * allowing other constructs to reference them for IAM permissions, event notifications,
+ * or URL generation.
+ * 
+ * Cost Optimization: CloudFront provides global CDN at pay-per-use pricing with no minimum
+ * fees. Free tier includes 1TB data transfer and 10M requests/month.
  */
 export class StorageConstruct extends Construct {
   /**
@@ -22,6 +28,15 @@ export class StorageConstruct extends Construct {
    * - Granting IAM permissions to Lambda functions
    */
   public readonly uploadBucket: s3.Bucket;
+
+  /**
+   * Public property to expose the CloudFront distribution for uploaded images.
+   * This enables other constructs to reference the distribution for:
+   * - Generating image URLs for frontend display
+   * - Cache invalidation if needed
+   * - Custom domain configuration
+   */
+  public readonly imageDistribution: cloudfront.Distribution;
 
   constructor(scope: Construct, id: string) {
     super(scope, id);
@@ -102,6 +117,65 @@ export class StorageConstruct extends Construct {
        * - Enable rollback capabilities
        */
       versioned: false,
+    });
+
+    /**
+     * Origin Access Control (OAC) for CloudFront.
+     * Architectural Decision: OAC is the modern replacement for Origin Access Identity (OAI).
+     * It provides better security and supports AWS Signature Version 4 for S3 access.
+     * 
+     * OAC ensures that:
+     * - Only CloudFront can access the S3 bucket for GET requests
+     * - All requests from CloudFront to S3 are signed
+     * - Direct S3 bucket access returns 403 Forbidden
+     * 
+     * Security: This prevents users from bypassing CloudFront and accessing S3 directly,
+     * which maintains our security posture while still allowing image display.
+     */
+    const originAccessControl = new cloudfront.S3OriginAccessControl(this, 'ImageOAC', {
+      description: 'Origin Access Control for Image Upload Bucket',
+    });
+
+    /**
+     * CloudFront Distribution for serving uploaded images.
+     * Architectural Decision: CloudFront provides:
+     * - Global edge network for low-latency image access from anywhere
+     * - Automatic HTTPS with free SSL/TLS certificate (*.cloudfront.net)
+     * - DDoS protection via AWS Shield Standard (included at no extra cost)
+     * - Reduced S3 costs through caching (fewer S3 GET requests)
+     * - Secure image serving while keeping S3 bucket private
+     * 
+     * ViewerProtocolPolicy.REDIRECT_TO_HTTPS ensures all HTTP requests are upgraded to HTTPS,
+     * meeting modern security standards and protecting user data in transit.
+     * 
+     * CachePolicy.CACHING_OPTIMIZED provides optimal caching for static images:
+     * - Long cache TTL to minimize S3 requests
+     * - Automatic compression (gzip/brotli) for faster transfers
+     * - Query string and header forwarding disabled for better cache hit ratio
+     * 
+     * Note: S3BucketOrigin.withOriginAccessControl automatically sets up the necessary
+     * bucket policy to allow CloudFront to access the bucket using OAC for GET requests.
+     * 
+     * Cost Impact: CloudFront pricing is pay-per-use with no minimum fees.
+     * - First 10TB/month: $0.085 per GB (data transfer out)
+     * - First 10M requests: $0.0075 per 10,000 requests
+     * - Free tier: 1TB data transfer + 10M requests/month (first 12 months)
+     */
+    this.imageDistribution = new cloudfront.Distribution(this, 'ImageDistribution', {
+      comment: 'CloudFront distribution for serving uploaded images from S3',
+      defaultBehavior: {
+        origin: origins.S3BucketOrigin.withOriginAccessControl(this.uploadBucket, {
+          originAccessControl,
+        }),
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        /**
+         * AllowedMethods: Only GET and HEAD are needed for image serving.
+         * This prevents users from using CloudFront to upload (PUT) or delete (DELETE)
+         * objects, maintaining security. Uploads must go through the presigned URL flow.
+         */
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+      },
     });
   }
 }

@@ -39,6 +39,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 }
 
 .gallery-image {
@@ -50,6 +51,47 @@
 
 .gallery-card:hover .gallery-image {
   transform: scale(1.05);
+}
+
+/* Delete Button */
+.delete-button {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  border: none;
+  background-color: rgba(239, 68, 68, 0.9);
+  color: white;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s, background-color 0.2s;
+  z-index: 10;
+}
+
+.gallery-card:hover .delete-button {
+  opacity: 1;
+}
+
+.delete-button:hover:not(:disabled) {
+  transform: scale(1.1);
+  background-color: rgba(220, 38, 38, 1);
+}
+
+.delete-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Deleting State */
+.gallery-card.deleting {
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 /* Gallery Info */

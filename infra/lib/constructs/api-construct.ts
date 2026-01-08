@@ -87,6 +87,15 @@ export class ApiConstruct extends Construct {
    */
   public readonly generatePresignedUrlFunction: NodejsFunction;
 
+  /**
+   * Public property to expose the DeleteImage Lambda function.
+   * This enables other constructs to:
+   * - Configure additional API routes
+   * - Grant additional IAM permissions as needed
+   * - Set up monitoring and alarms
+   */
+  public readonly deleteImageFunction: NodejsFunction;
+
   constructor(scope: Construct, id: string, props: ApiProps) {
     super(scope, id);
 
@@ -288,11 +297,12 @@ export class ApiConstruct extends Construct {
        * allowHeaders: Specifies which headers the client can send. Content-Type is required
        * for JSON API requests. Add Authorization if implementing authentication.
        */
-      corsPreflight: {
+       corsPreflight: {
         allowOrigins: ['*'],
         allowMethods: [
           apigatewayv2.CorsHttpMethod.GET,
           apigatewayv2.CorsHttpMethod.POST,
+          apigatewayv2.CorsHttpMethod.DELETE,
           apigatewayv2.CorsHttpMethod.PUT,
           apigatewayv2.CorsHttpMethod.OPTIONS,
         ],
@@ -386,6 +396,116 @@ export class ApiConstruct extends Construct {
       path: '/upload-url',
       methods: [apigatewayv2.HttpMethod.GET],
       integration: generatePresignedUrlIntegration,
+    });
+
+    /**
+     * DeleteImage Lambda Function
+     * 
+     * Architectural Decision: Using NodejsFunction construct for TypeScript Lambda development.
+     * This Lambda handles DELETE requests to remove images from both S3 and DynamoDB, ensuring
+     * complete resource cleanup when users delete images from the gallery.
+     * 
+     * Key Design Choices:
+     * - Runtime Node.js 20.x: Latest LTS version with improved performance
+     * - Architecture ARM64 (Graviton2): 34% better price-performance vs x86_64 (FinOps optimization)
+     * - Memory 256 MB: Minimal allocation for delete operations
+     * - Timeout 30 seconds: Sufficient for S3 and DynamoDB delete operations
+     * - Bundling: esbuild with minification for efficient cold starts
+     * 
+     * Security:
+     * - Uses base executionRole for CloudWatch Logs
+     * - S3 DeleteObject and DynamoDB DeleteItem permissions granted via CDK's grant methods
+     * - Future: Add authentication to prevent unauthorized deletions
+     * 
+     * Environment Variables:
+     * - BUCKET_NAME: S3 bucket name for deleting uploaded images
+     * - TABLE_NAME: DynamoDB table name for deleting metadata
+     * 
+     * Cost Optimization:
+     * - ARM64 reduces costs by ~20%
+     * - Minimal memory (256 MB) keeps per-invocation costs low
+     * - S3 delete operations are free
+     * - DynamoDB delete consumes 1 WRU per item
+     */
+    this.deleteImageFunction = new NodejsFunction(this, 'DeleteImageFunction', {
+      description: 'Deletes images from S3 and DynamoDB when user removes them from the gallery',
+      runtime: lambda.Runtime.NODEJS_20_X,
+      architecture: lambda.Architecture.ARM_64,
+      handler: 'handler',
+      entry: path.join(__dirname, '..', '..', '..', 'backend', 'delete-image.ts'),
+      role: props.executionRole,
+      timeout: cdk.Duration.seconds(30),
+      memorySize: 256,
+      environment: {
+        BUCKET_NAME: props.bucket.bucketName,
+        TABLE_NAME: props.table.tableName,
+      },
+      bundling: {
+        minify: true,
+        sourceMap: true,
+        target: 'node20',
+        forceDockerBundling: false,
+      },
+    });
+
+    /**
+     * IAM Permissions: Grant Lambda delete access to S3 and DynamoDB.
+     * 
+     * Architectural Decision: Using CDK's grant methods to implement least-privilege access.
+     * These methods automatically create scoped IAM policies that grant only the necessary
+     * permissions for the Lambda function to operate.
+     * 
+     * grantDelete allows:
+     * - s3:DeleteObject
+     * 
+     * grantWriteData allows (includes delete):
+     * - dynamodb:DeleteItem
+     * - dynamodb:PutItem
+     * - dynamodb:UpdateItem
+     * 
+     * This is more restrictive than granting wildcard (*) permissions, following the principle
+     * of least privilege.
+     * 
+     * Cost Impact: No additional costs for IAM permissions.
+     */
+    props.bucket.grantDelete(this.deleteImageFunction);
+    props.table.grantWriteData(this.deleteImageFunction);
+
+    /**
+     * Lambda Integration for DeleteImage
+     * 
+     * Architectural Decision: Using HttpLambdaIntegration to wire the delete Lambda
+     * to API Gateway. This integration handles all the plumbing:
+     * - Grants API Gateway permission to invoke the Lambda
+     * - Transforms HTTP requests to Lambda events (payload format 2.0)
+     * - Transforms Lambda responses back to HTTP responses
+     */
+    const deleteImageIntegration = new HttpLambdaIntegration(
+      'DeleteImageIntegration',
+      this.deleteImageFunction
+    );
+
+    /**
+     * API Gateway Route: DELETE /images/{imageId}
+     * 
+     * Architectural Decision: Creating a RESTful route for deleting images.
+     * The path '/images/{imageId}' follows RESTful conventions where:
+     * - DELETE /images/{imageId} - Deletes a specific image
+     * 
+     * The {imageId} path parameter is extracted by the Lambda and used to identify
+     * which image to delete from S3 and DynamoDB.
+     * 
+     * Security Considerations:
+     * - Future: Add authentication using API Gateway authorizers
+     * - Future: Rate limiting to prevent abuse
+     * - Future: Validate user ownership of the image before deletion
+     * 
+     * URL format: https://{api-id}.execute-api.{region}.amazonaws.com/images/{imageId}
+     */
+    this.httpApi.addRoutes({
+      path: '/images/{imageId}',
+      methods: [apigatewayv2.HttpMethod.DELETE],
+      integration: deleteImageIntegration,
     });
   }
 }

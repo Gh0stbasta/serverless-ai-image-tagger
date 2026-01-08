@@ -591,9 +591,9 @@ describe('App Component', () => {
       
       await waitFor(() => {
         const h1 = screen.getByRole('heading', { level: 1 })
-        const h2 = screen.getByRole('heading', { level: 2 })
+        const h2Elements = screen.getAllByRole('heading', { level: 2 })
         expect(h1).toBeInTheDocument()
-        expect(h2).toBeInTheDocument()
+        expect(h2Elements.length).toBeGreaterThan(0)
       })
     })
   })

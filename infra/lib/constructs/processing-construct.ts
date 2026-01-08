@@ -33,6 +33,12 @@ export interface ProcessingProps {
    * This should be the base execution role with CloudWatch Logs permissions.
    */
   readonly executionRole: iam.IRole;
+
+  /**
+   * The CloudFront distribution domain name for serving images.
+   * This is used to construct the public HTTPS URL for images instead of direct S3 URLs.
+   */
+  readonly cloudFrontDomain: string;
 }
 
 /**
@@ -114,6 +120,7 @@ export class ProcessingConstruct extends Construct {
         BUCKET_NAME: props.bucket.bucketName,
         REKOGNITION_MAX_LABELS: '10',
         REKOGNITION_MIN_CONFIDENCE: '70',
+        CLOUDFRONT_DOMAIN: props.cloudFrontDomain,
       },
       bundling: {
         minify: true,

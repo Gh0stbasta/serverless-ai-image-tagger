@@ -133,12 +133,15 @@ export const handler = async (event: S3Event, context: Context): Promise<void> =
        * 
        * Schema Design:
        * - imageId: Partition key (using S3 object key for simplicity and uniqueness)
-       * - s3Url: Full S3 URL for direct access to the image
+       * - s3Url: CloudFront URL for secure HTTPS access to the image via CDN
        * - labels: Array of detected labels with confidence scores
        * - timestamp: ISO 8601 timestamp for temporal queries and TTL support
        * 
        * Using PutCommand overwrites existing items with the same imageId, ensuring
        * idempotency if the Lambda is retried. This prevents duplicate records.
+       * 
+       * Security: Images are served via CloudFront distribution with Origin Access Control,
+       * ensuring S3 bucket remains private while images are publicly accessible via HTTPS.
        * 
        * Cost Impact: DynamoDB charges $1.25 per million write request units (WRUs).
        * Each PutCommand consumes 1 WRU per 1KB of data. Free tier includes 25 WRUs/month.
@@ -149,8 +152,14 @@ export const handler = async (event: S3Event, context: Context): Promise<void> =
         throw new Error('TABLE_NAME environment variable is not set');
       }
 
-      const region = process.env.AWS_REGION || 'us-east-1';
-      const s3Url = `https://${bucket}.s3.${region}.amazonaws.com/${encodeURIComponent(key)}`;
+      const cloudFrontDomain = process.env.CLOUDFRONT_DOMAIN;
+      if (!cloudFrontDomain) {
+        console.error('CLOUDFRONT_DOMAIN environment variable is not set');
+        throw new Error('CLOUDFRONT_DOMAIN environment variable is not set');
+      }
+
+      // Construct CloudFront URL: https://{cloudfront-domain}/{object-key}
+      const s3Url = `https://${cloudFrontDomain}/${encodeURIComponent(key)}`;
       const labels = response.Labels?.map((label) => ({
         name: label.Name || 'Unknown',
         confidence: label.Confidence ? parseFloat(label.Confidence.toFixed(2)) : 0,
