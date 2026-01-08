@@ -47,7 +47,7 @@ Unlike traditional container-based solutions, this architecture generates **Zero
 
 ## 🤖 The "AI-Augmented" Team Structure
 
-This project explores modern software engineering by treating AI not just as a tool, but as an integral part of the project team. I acted as the **Lead Architect**, orchestrating two AI agents to deliver a production-grade prototype within a 2-week sprint.
+This project explores modern software engineering by treating AI not just as a tool, but as an integral part of the project team. I acted as the **Lead Architect**, orchestrating two AI agents to deliver a production-grade prototype within a 1-week sprint.
 
 | Role | Agent / Human | Responsibilities |
 | :--- | :--- | :--- |
@@ -64,20 +64,20 @@ This project explores modern software engineering by treating AI not just as a t
 The system is built on an **asynchronous, event-driven** architecture where each component operates independently and communicates through AWS-managed event buses. This design eliminates tight coupling and enables infinite horizontal scaling.
 
 ```mermaid
-graph TB
-    User([👤 User]) -->|1. Upload Image| S3[📦 S3 Bucket<br/>Image Storage]
-    S3 -->|2. ObjectCreated Event| Lambda[⚡ Lambda Function<br/>Image Processor]
-    Lambda -->|3. Analyze Image| Rekognition[🤖 Amazon Rekognition<br/>AI Analysis]
-    Lambda -->|4. Store Metadata & Tags| DynamoDB[(🗄️ DynamoDB<br/>NoSQL Database)]
-    User -->|5. Query Results| API[🌐 API Gateway<br/>HTTP API]
-    API -->|6. Fetch Tags| DynamoDB
-    
-    style User fill:#e1f5ff
-    style S3 fill:#ffd9b3
-    style Lambda fill:#ffeb99
-    style Rekognition fill:#d4f1d4
-    style DynamoDB fill:#e6ccff
-    style API fill:#ffe6e6
+graph LR
+    User([👤 User]) -->|1. Upload| S3[📦 S3 Bucket]
+    S3 -->|2. Trigger| Lambda[⚡ Lambda Processor]
+    Lambda -->|3. Analyze| Rekognition[🤖 Rekognition AI]
+    Lambda -->|4. Store| DynamoDB[(🗄️ DynamoDB)]
+    User -->|5. Query| API[🌐 API Gateway]
+    API -->|6. Fetch| DynamoDB
+
+    style User fill:#333,stroke:#fff,color:#fff
+    style S3 fill:#333,stroke:#fff,color:#fff
+    style Lambda fill:#333,stroke:#fff,color:#fff
+    style Rekognition fill:#333,stroke:#fff,color:#fff
+    style DynamoDB fill:#333,stroke:#fff,color:#fff
+    style API fill:#333,stroke:#fff,color:#fff
 ```
 
 ### Workflow Explanation
@@ -111,6 +111,43 @@ graph TB
 * **Frontend:** React + Vite + TypeScript
 * **CI/CD:** GitHub Actions (Automated Deploy & Destroy Pipelines)
 * **Dev Environment:** Docker DevContainer (ensures reproducible builds)
+
+---
+
+## 🔐 GitHub Secrets Configuration
+
+For automated CI/CD deployment via GitHub Actions, configure the following secrets in your repository settings (Settings → Secrets and variables → Actions):
+
+### Required Secrets
+
+1. **`AWS_DEPLOY_ROLE_ARN`** (Secret)
+   - **Description:** The ARN of the IAM role that GitHub Actions will assume using OIDC
+   - **Format:** `arn:aws:iam::{ACCOUNT_ID}:role/{ROLE_NAME}`
+   - **Example:** `arn:aws:iam::123456789012:role/GitHubActionsDeployRole`
+
+2. **`AWS_ACCOUNT_ID`** (Secret)
+   - **Description:** Your AWS Account ID
+   - **Format:** 12-digit number
+   - **Example:** `123456789012`
+
+3. **`NOTIFICATION_EMAIL`** (Secret)
+   - **Description:** Email address for deployment notifications via SNS
+   - **Example:** `your-email@example.com`
+
+4. **`VITE_API_URL`** (Secret)
+   - **Description:** API Gateway endpoint URL for the frontend
+   - **Example:** `https://abc123.execute-api.us-east-1.amazonaws.com`
+
+### Optional Variables
+
+1. **`AWS_REGION`** (Variable)
+   - **Description:** The AWS region to deploy to
+   - **Default:** `eu-central-1`
+   - **Example:** `us-east-1`, `eu-west-1`
+
+### OIDC Setup
+
+The deployment uses OpenID Connect (OIDC) for secure authentication, eliminating the need for long-lived AWS access keys. Refer to the [CI/CD Setup Guide](docs/CICD-SETUP.md) for detailed OIDC configuration instructions.
 
 ---
 
@@ -186,25 +223,31 @@ The **DevContainer** provides a pre-configured development environment with all 
     * Type `y` to confirm deployment
     * Deployment typically takes 3-5 minutes
 
-5.  **Retrieve Stack Outputs:**
-    
-    After deployment completes, note the CloudFormation outputs:
-    * **ApiEndpoint:** Your API Gateway URL
-    * **WebsiteURL:** Your CloudFront distribution URL
-    * **ImageBucket:** Your S3 bucket name
-
 ---
 
 ### Cleanup (Destroy Resources)
 
-To avoid ongoing AWS charges, destroy the stack when done:
+To avoid ongoing AWS charges, destroy the stack when done.
+
+#### Using GitHub Actions (Recommended)
+
+1. Navigate to your repository on GitHub
+2. Go to **Actions** tab
+3. Select **"Destroy AWS Stack"** workflow from the left sidebar
+4. Click **"Run workflow"** dropdown
+5. Type `destroy` in the confirmation field
+6. Click **"Run workflow"** button
+
+The workflow will safely remove all AWS resources created by the deployment.
+
+#### Using CLI (Local Development)
 
 ```bash
 cd infra
 cdk destroy
 ```
 
-This removes all AWS resources **except** the S3 bucket (which requires manual deletion if it contains objects).
+**Note:** This removes all AWS resources **except** the S3 bucket (which requires manual deletion if it contains objects).
 
 ---
 
