@@ -1,24 +1,7 @@
 import { useState, useEffect } from 'react'
+import { fetchImages as fetchImagesFromAPI } from './services/apiService'
+import type { ImageItem } from './types'
 import './Gallery.css'
-
-/**
- * Label interface matching the backend response structure
- */
-interface Label {
-  name: string;
-  confidence: number;
-}
-
-/**
- * ImageMetadata interface matching the DynamoDB schema
- * from the get-images Lambda function
- */
-interface ImageMetadata {
-  imageId: string;
-  s3Url: string;
-  labels: Label[];
-  timestamp: string;
-}
 
 /**
  * Gallery Component Props
@@ -45,29 +28,23 @@ interface GalleryProps {
  * @param apiUrl - The base URL of the API Gateway endpoint
  */
 function Gallery({ apiUrl }: GalleryProps) {
-  const [images, setImages] = useState<ImageMetadata[]>([])
+  const [images, setImages] = useState<ImageItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   /**
    * Fetches images from the backend API
    * 
-   * Architectural Decision: Use useEffect with empty dependency array to fetch on mount.
-   * This ensures data is loaded when the component first renders.
+   * Architectural Decision: Use the centralized apiService for data fetching.
+   * This ensures consistent error handling and makes it easier to mock in tests.
    */
   useEffect(() => {
-    const fetchImages = async () => {
+    const loadImages = async () => {
       setIsLoading(true)
       setError(null)
 
       try {
-        const response = await fetch(`${apiUrl}/images`)
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch images: ${response.status} ${response.statusText}`)
-        }
-
-        const data: ImageMetadata[] = await response.json()
+        const data = await fetchImagesFromAPI(apiUrl)
         setImages(data)
       } catch (err) {
         console.error('Error fetching images:', err)
@@ -77,7 +54,7 @@ function Gallery({ apiUrl }: GalleryProps) {
       }
     }
 
-    fetchImages()
+    loadImages()
   }, [apiUrl])
 
   /**

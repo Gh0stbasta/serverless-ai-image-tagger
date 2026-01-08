@@ -1,15 +1,7 @@
 import { useState, useRef } from 'react'
 import Gallery from './Gallery'
+import { getPresignedUrl, uploadImageToS3 } from './services/apiService'
 import './App.css'
-
-/**
- * Response from the presigned URL API endpoint
- */
-interface PresignedUrlResponse {
-  uploadUrl: string;
-  key: string;
-  expiresIn: number;
-}
 
 function App() {
   const [isUploading, setIsUploading] = useState(false)
@@ -36,25 +28,10 @@ function App() {
 
     try {
       // Step 1: Fetch presigned URL from API
-      const response = await fetch(`${apiUrl}/upload-url`)
-      if (!response.ok) {
-        throw new Error(`Failed to get upload URL: ${response.status} ${response.statusText}`)
-      }
-
-      const data: PresignedUrlResponse = await response.json()
+      const data = await getPresignedUrl(apiUrl)
 
       // Step 2: Upload file to S3 using presigned URL
-      const uploadResponse = await fetch(data.uploadUrl, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type || 'application/octet-stream',
-        },
-      })
-
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`)
-      }
+      await uploadImageToS3(data.uploadUrl, file)
 
       console.log(`Successfully uploaded file to S3 with key: ${data.key}`)
       
