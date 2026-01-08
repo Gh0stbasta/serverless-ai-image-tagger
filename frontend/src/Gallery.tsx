@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { fetchImages as fetchImagesFromAPI } from './services/apiService'
+import { fetchImages as fetchImagesFromAPI, deleteImage as deleteImageFromAPI } from './services/apiService'
 import type { ImageItem } from './types'
 import './Gallery.css'
 
@@ -31,6 +31,7 @@ function Gallery({ apiUrl }: GalleryProps) {
   const [images, setImages] = useState<ImageItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [deletingImageIds, setDeletingImageIds] = useState<Set<string>>(new Set())
 
   /**
    * Fetches images from the backend API
@@ -86,6 +87,53 @@ function Gallery({ apiUrl }: GalleryProps) {
   }
 
   /**
+   * Handles image deletion
+   * 
+   * Architectural Decision: Implements optimistic UI updates for better UX.
+   * The image is immediately removed from the UI, and if the deletion fails,
+   * we show an error and reload the images from the backend.
+   * 
+   * This provides instant feedback to the user while maintaining data consistency
+   * by re-fetching on error.
+   */
+  const handleDelete = async (imageId: string) => {
+    // Optimistic UI update: mark image as deleting
+    setDeletingImageIds(prev => new Set(prev).add(imageId))
+    setError(null)
+
+    try {
+      // Call the delete API
+      await deleteImageFromAPI(apiUrl, imageId)
+      
+      // Remove from local state on success
+      setImages(prevImages => prevImages.filter(img => img.imageId !== imageId))
+      setDeletingImageIds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(imageId)
+        return newSet
+      })
+    } catch (err) {
+      console.error('Error deleting image:', err)
+      setError(err instanceof Error ? err.message : 'Failed to delete image')
+      
+      // Remove from deleting set
+      setDeletingImageIds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(imageId)
+        return newSet
+      })
+      
+      // Reload images to ensure UI is in sync with backend
+      try {
+        const data = await fetchImagesFromAPI(apiUrl)
+        setImages(data)
+      } catch (reloadErr) {
+        console.error('Error reloading images after delete failure:', reloadErr)
+      }
+    }
+  }
+
+  /**
    * Loading State
    */
   if (isLoading) {
@@ -128,37 +176,52 @@ function Gallery({ apiUrl }: GalleryProps) {
     <section className="gallery-section">
       <h2>Your Images ({images.length})</h2>
       <div className="gallery-grid">
-        {images.map((image) => (
-          <div key={image.imageId} className="gallery-card">
-            <div className="gallery-image-container">
-              <img
-                src={image.s3Url}
-                alt={image.imageId}
-                className="gallery-image"
-                loading="lazy"
-              />
+        {images.map((image) => {
+          const isDeleting = deletingImageIds.has(image.imageId)
+          return (
+            <div 
+              key={image.imageId} 
+              className={`gallery-card ${isDeleting ? 'deleting' : ''}`}
+            >
+              <div className="gallery-image-container">
+                <img
+                  src={image.s3Url}
+                  alt={image.imageId}
+                  className="gallery-image"
+                  loading="lazy"
+                />
+                <button
+                  className="delete-button"
+                  onClick={() => handleDelete(image.imageId)}
+                  disabled={isDeleting}
+                  aria-label="Delete image"
+                  title="Delete image"
+                >
+                  {isDeleting ? '⏳' : '🗑️'}
+                </button>
+              </div>
+              <div className="gallery-info">
+                <p className="gallery-filename" title={image.imageId}>
+                  {image.imageId.split('/').pop()}
+                </p>
+                <p className="gallery-date">{formatDate(image.timestamp)}</p>
+                {image.labels && image.labels.length > 0 && (
+                  <div className="gallery-tags">
+                    {image.labels.map((label, index) => (
+                      <span
+                        key={`${image.imageId}-${label.name}-${index}`}
+                        className={`tag-badge ${getBadgeClass(label.confidence)}`}
+                        title={`Confidence: ${label.confidence}%`}
+                      >
+                        {label.name} {Math.round(label.confidence)}%
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="gallery-info">
-              <p className="gallery-filename" title={image.imageId}>
-                {image.imageId.split('/').pop()}
-              </p>
-              <p className="gallery-date">{formatDate(image.timestamp)}</p>
-              {image.labels && image.labels.length > 0 && (
-                <div className="gallery-tags">
-                  {image.labels.map((label, index) => (
-                    <span
-                      key={`${image.imageId}-${label.name}-${index}`}
-                      className={`tag-badge ${getBadgeClass(label.confidence)}`}
-                      title={`Confidence: ${label.confidence}%`}
-                    >
-                      {label.name} {Math.round(label.confidence)}%
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </section>
   )

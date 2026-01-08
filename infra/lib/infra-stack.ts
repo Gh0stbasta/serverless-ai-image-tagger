@@ -207,6 +207,7 @@ export class InfraStack extends cdk.Stack {
     this.httpApi = api.httpApi;
     this.getImagesFunction = api.getImagesFunction;
     this.generatePresignedUrlFunction = api.generatePresignedUrlFunction;
+    this.deleteImageFunction = api.deleteImageFunction;
 
     // CloudFormation Outputs - created at stack level to preserve exact Output IDs
     
@@ -297,6 +298,18 @@ export class InfraStack extends cdk.Stack {
       value: api.generatePresignedUrlFunction.functionArn,
       description: 'ARN of the GeneratePresignedUrl Lambda function',
       exportName: 'GeneratePresignedUrlFunctionArn',
+    });
+
+    new cdk.CfnOutput(this, 'DeleteImageFunctionName', {
+      value: api.deleteImageFunction.functionName,
+      description: 'Name of the DeleteImage Lambda function',
+      exportName: 'DeleteImageFunctionName',
+    });
+
+    new cdk.CfnOutput(this, 'DeleteImageFunctionArn', {
+      value: api.deleteImageFunction.functionArn,
+      description: 'ARN of the DeleteImage Lambda function',
+      exportName: 'DeleteImageFunctionArn',
     });
 
     /**
@@ -435,6 +448,15 @@ export class InfraStack extends cdk.Stack {
    * - Set up monitoring and alarms
    */
   public readonly generatePresignedUrlFunction: NodejsFunction;
+
+  /**
+   * Public property to expose the DeleteImage Lambda function.
+   * This enables other constructs to:
+   * - Configure additional API routes
+   * - Grant additional IAM permissions as needed
+   * - Set up monitoring and alarms
+   */
+  public readonly deleteImageFunction: NodejsFunction;
 
   /**
    * Public property to expose the CloudFront distribution.

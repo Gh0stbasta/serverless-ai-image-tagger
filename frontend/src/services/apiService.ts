@@ -85,3 +85,32 @@ export async function uploadImageToS3(url: string, file: File): Promise<void> {
     throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
   }
 }
+
+/**
+ * Deletes an image from the backend (S3 and DynamoDB)
+ * 
+ * @param apiUrl - The base URL of the API Gateway endpoint
+ * @param imageId - The unique identifier of the image to delete (S3 object key)
+ * @returns Promise that resolves when deletion is complete
+ * @throws Error if the API request fails
+ * 
+ * Architectural Decision: This function calls the DELETE /images/{imageId} endpoint
+ * to remove both the S3 object and DynamoDB metadata entry. The backend ensures
+ * atomic deletion of both resources.
+ * 
+ * The imageId must be URL-encoded to handle special characters in S3 object keys
+ * (e.g., spaces, slashes). The backend will decode it before processing.
+ * 
+ * Security Note: Currently no authentication. In production, add Authorization header
+ * with JWT or session token to prevent unauthorized deletions.
+ */
+export async function deleteImage(apiUrl: string, imageId: string): Promise<void> {
+  const encodedImageId = encodeURIComponent(imageId);
+  const response = await fetch(`${apiUrl}/images/${encodedImageId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Delete failed: ${response.status} ${response.statusText}`);
+  }
+}
