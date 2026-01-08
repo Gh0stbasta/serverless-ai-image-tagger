@@ -182,6 +182,40 @@ describe('DeleteImage Lambda Handler', () => {
   });
 
   /**
+   * Test: ImageId with Slashes (S3 Pseudo-Folder Structure)
+   * Validates that the handler correctly handles imageIds containing slashes,
+   * which represent S3 pseudo-folder structures like "uploads/123.jpg".
+   * This test ensures the greedy path parameter ({imageId+}) in API Gateway
+   * correctly captures the full S3 key including slashes.
+   */
+  test('should handle imageId with slashes (e.g., uploads/123.jpg)', async () => {
+    // GIVEN
+    const decodedImageId = 'uploads/123.jpg';
+    const encodedImageId = encodeURIComponent(decodedImageId);
+    const event = createDeleteApiEvent(encodedImageId);
+    const context = createMockContext();
+    
+    s3Mock.on(DeleteObjectCommand).resolves({});
+    dynamoDbMock.on(DeleteCommand).resolves({});
+
+    // WHEN
+    const response = await handler(event, context);
+
+    // THEN
+    expect(response.statusCode).toBe(204);
+    
+    // Verify S3 delete was called with the full decoded path
+    const s3Call = s3Mock.call(0);
+    expect(s3Call.args[0].input.Key).toBe(decodedImageId);
+    
+    // Verify DynamoDB delete was called with the full decoded path
+    const dynamoCall = dynamoDbMock.call(0);
+    expect(dynamoCall.args[0].input.Key.imageId).toBe(decodedImageId);
+    
+    expect(consoleLogSpy).toHaveBeenCalledWith(`Deleting image: ${decodedImageId}`);
+  });
+
+  /**
    * Test: Missing ImageId Parameter
    * Validates that the handler returns 400 Bad Request when imageId is missing
    */

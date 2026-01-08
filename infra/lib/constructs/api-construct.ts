@@ -486,14 +486,24 @@ export class ApiConstruct extends Construct {
     );
 
     /**
-     * API Gateway Route: DELETE /images/{imageId}
+     * API Gateway Route: DELETE /images/{imageId+}
      * 
-     * Architectural Decision: Creating a RESTful route for deleting images.
-     * The path '/images/{imageId}' follows RESTful conventions where:
-     * - DELETE /images/{imageId} - Deletes a specific image
+     * Architectural Decision: Creating a RESTful route for deleting images with greedy path parameter.
+     * The path '/images/{imageId+}' uses a greedy path parameter (+) to capture imageIds containing
+     * slashes (e.g., 'uploads/123.jpg'). This is necessary because S3 object keys often contain
+     * forward slashes to organize objects in a pseudo-folder structure.
      * 
-     * The {imageId} path parameter is extracted by the Lambda and used to identify
-     * which image to delete from S3 and DynamoDB.
+     * Without the greedy parameter, API Gateway would only capture the first path segment,
+     * causing 404 errors for keys like 'uploads/image.jpg' (would only capture 'uploads').
+     * 
+     * The {imageId+} greedy parameter captures the entire remaining path, allowing:
+     * - DELETE /images/simple.jpg → imageId = 'simple.jpg'
+     * - DELETE /images/uploads/photo.jpg → imageId = 'uploads/photo.jpg'
+     * - DELETE /images/path/to/nested/file.jpg → imageId = 'path/to/nested/file.jpg'
+     * 
+     * Note: The Lambda handler receives the imageId as a URL-decoded value. For example,
+     * a request to '/images/uploads%2Fphoto.jpg' will have imageId = 'uploads/photo.jpg'
+     * in the path parameters, which must then be decoded using decodeURIComponent().
      * 
      * Security Considerations:
      * - Future: Add authentication using API Gateway authorizers
@@ -503,7 +513,7 @@ export class ApiConstruct extends Construct {
      * URL format: https://{api-id}.execute-api.{region}.amazonaws.com/images/{imageId}
      */
     this.httpApi.addRoutes({
-      path: '/images/{imageId}',
+      path: '/images/{imageId+}',
       methods: [apigatewayv2.HttpMethod.DELETE],
       integration: deleteImageIntegration,
     });
