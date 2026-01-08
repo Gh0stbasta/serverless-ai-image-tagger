@@ -24,7 +24,10 @@ jobs:
           node-version: '20'
           cache: 'npm'
           # Wir zeigen auf infra, damit der Cache-Check nicht fehlschlägt
-          cache-dependency-path: infra/package-lock.json
+          cache-dependency-path: |
+            infra/package-lock.json
+            backend/package-lock.json
+            frontend/package-lock.json
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
