@@ -77,12 +77,7 @@ export class InfraStack extends cdk.Stack {
       ],
     });
 
-    // Output the role ARN for use in GitHub Actions workflow configuration
-    new cdk.CfnOutput(this, 'GitHubDeployRoleArn', {
-      value: githubDeployRole.roleArn,
-      description: 'ARN of the IAM role for GitHub Actions deployment',
-      exportName: 'GitHubActionsDeployRoleArn',
-    });
+
 
     /**
      * Base IAM Role for Lambda function execution.
@@ -109,12 +104,7 @@ export class InfraStack extends cdk.Stack {
       ],
     });
 
-    // Output the Lambda execution role ARN for reference and reuse
-    new cdk.CfnOutput(this, 'LambdaExecutionRoleArn', {
-      value: lambdaExecutionRole.roleArn,
-      description: 'ARN of the base Lambda execution role (CloudWatch Logs only)',
-      exportName: 'LambdaExecutionRoleArn',
-    });
+
 
     /**
      * Export the Lambda execution role for use in other constructs.
@@ -209,108 +199,7 @@ export class InfraStack extends cdk.Stack {
     this.generatePresignedUrlFunction = api.generatePresignedUrlFunction;
     this.deleteImageFunction = api.deleteImageFunction;
 
-    // CloudFormation Outputs - created at stack level to preserve exact Output IDs
-    
-    // S3 Bucket Outputs
-    new cdk.CfnOutput(this, 'UploadBucketName', {
-      value: storage.uploadBucket.bucketName,
-      description: 'Name of the S3 bucket for image uploads',
-      exportName: 'ImageUploadBucketName',
-    });
 
-    new cdk.CfnOutput(this, 'UploadBucketArn', {
-      value: storage.uploadBucket.bucketArn,
-      description: 'ARN of the S3 bucket for image uploads',
-      exportName: 'ImageUploadBucketArn',
-    });
-
-    // CloudFront Distribution for Images Output
-    new cdk.CfnOutput(this, 'ImageDistributionUrl', {
-      value: `https://${storage.imageDistribution.distributionDomainName}`,
-      description: 'CloudFront URL for accessing uploaded images',
-      exportName: 'ImageDistributionUrl',
-    });
-
-    new cdk.CfnOutput(this, 'ImageDistributionId', {
-      value: storage.imageDistribution.distributionId,
-      description: 'ID of the CloudFront distribution for images',
-      exportName: 'ImageDistributionId',
-    });
-
-    // DynamoDB Table Outputs
-    new cdk.CfnOutput(this, 'ImageMetadataTableName', {
-      value: database.table.tableName,
-      description: 'Name of the DynamoDB table storing image metadata and AI labels',
-      exportName: 'ImageMetadataTableName',
-    });
-
-    new cdk.CfnOutput(this, 'ImageMetadataTableArn', {
-      value: database.table.tableArn,
-      description: 'ARN of the DynamoDB table storing image metadata and AI labels',
-      exportName: 'ImageMetadataTableArn',
-    });
-
-    // Lambda Function Outputs
-    new cdk.CfnOutput(this, 'ImageProcessorFunctionName', {
-      value: processing.imageProcessorFunction.functionName,
-      description: 'Name of the ImageProcessor Lambda function',
-      exportName: 'ImageProcessorFunctionName',
-    });
-
-    new cdk.CfnOutput(this, 'ImageProcessorFunctionArn', {
-      value: processing.imageProcessorFunction.functionArn,
-      description: 'ARN of the ImageProcessor Lambda function',
-      exportName: 'ImageProcessorFunctionArn',
-    });
-
-    // API Gateway Outputs
-    new cdk.CfnOutput(this, 'HttpApiUrl', {
-      value: api.httpApi.url || 'N/A',
-      description: 'URL of the HTTP API Gateway for accessing image metadata',
-      exportName: 'HttpApiUrl',
-    });
-
-    new cdk.CfnOutput(this, 'HttpApiId', {
-      value: api.httpApi.httpApiId,
-      description: 'ID of the HTTP API Gateway',
-      exportName: 'HttpApiId',
-    });
-
-    new cdk.CfnOutput(this, 'GetImagesFunctionName', {
-      value: api.getImagesFunction.functionName,
-      description: 'Name of the GetImages Lambda function',
-      exportName: 'GetImagesFunctionName',
-    });
-
-    new cdk.CfnOutput(this, 'GetImagesFunctionArn', {
-      value: api.getImagesFunction.functionArn,
-      description: 'ARN of the GetImages Lambda function',
-      exportName: 'GetImagesFunctionArn',
-    });
-
-    new cdk.CfnOutput(this, 'GeneratePresignedUrlFunctionName', {
-      value: api.generatePresignedUrlFunction.functionName,
-      description: 'Name of the GeneratePresignedUrl Lambda function',
-      exportName: 'GeneratePresignedUrlFunctionName',
-    });
-
-    new cdk.CfnOutput(this, 'GeneratePresignedUrlFunctionArn', {
-      value: api.generatePresignedUrlFunction.functionArn,
-      description: 'ARN of the GeneratePresignedUrl Lambda function',
-      exportName: 'GeneratePresignedUrlFunctionArn',
-    });
-
-    new cdk.CfnOutput(this, 'DeleteImageFunctionName', {
-      value: api.deleteImageFunction.functionName,
-      description: 'Name of the DeleteImage Lambda function',
-      exportName: 'DeleteImageFunctionName',
-    });
-
-    new cdk.CfnOutput(this, 'DeleteImageFunctionArn', {
-      value: api.deleteImageFunction.functionArn,
-      description: 'ARN of the DeleteImage Lambda function',
-      exportName: 'DeleteImageFunctionArn',
-    });
 
     /**
      * Hosting Layer: CloudFront and S3 for production frontend hosting.
@@ -352,31 +241,7 @@ export class InfraStack extends cdk.Stack {
     });
     this.deploymentTopic = notification.topic;
 
-    // CloudFormation Outputs for Hosting Resources
-    
-    new cdk.CfnOutput(this, 'CloudFrontUrl', {
-      value: `https://${hosting.distribution.distributionDomainName}`,
-      description: 'URL of the CloudFront distribution for accessing the frontend application',
-      exportName: 'CloudFrontUrl',
-    });
 
-    new cdk.CfnOutput(this, 'CloudFrontDistributionId', {
-      value: hosting.distribution.distributionId,
-      description: 'ID of the CloudFront distribution',
-      exportName: 'CloudFrontDistributionId',
-    });
-
-    new cdk.CfnOutput(this, 'HostingBucketName', {
-      value: hosting.hostingBucket.bucketName,
-      description: 'Name of the S3 bucket for frontend static assets',
-      exportName: 'HostingBucketName',
-    });
-
-    new cdk.CfnOutput(this, 'DeploymentTopicArn', {
-      value: notification.topic.topicArn,
-      description: 'ARN of the SNS topic for deployment notifications',
-      exportName: 'DeploymentTopicArn',
-    });
   }
 
   /**

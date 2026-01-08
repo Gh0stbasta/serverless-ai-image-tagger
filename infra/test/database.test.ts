@@ -92,48 +92,6 @@ test('DynamoDB Table has DESTROY removal policy', () => {
 });
 
 /**
- * Test to verify DynamoDB Table name is exported as CloudFormation output.
- * This output is used by Lambda functions to reference the table at runtime.
- */
-test('DynamoDB Table name is exported as CloudFormation output', () => {
-  // GIVEN
-  const app = new cdk.App();
-  const stack = new Infra.InfraStack(app, 'TestStack');
-  
-  // WHEN
-  const template = Template.fromStack(stack);
-  
-  // THEN - Verify CloudFormation output exists
-  template.hasOutput('ImageMetadataTableName', {
-    Description: 'Name of the DynamoDB table storing image metadata and AI labels',
-    Export: {
-      Name: 'ImageMetadataTableName',
-    },
-  });
-});
-
-/**
- * Test to verify DynamoDB Table ARN is exported as CloudFormation output.
- * This output is used for IAM policy references and cross-stack dependencies.
- */
-test('DynamoDB Table ARN is exported as CloudFormation output', () => {
-  // GIVEN
-  const app = new cdk.App();
-  const stack = new Infra.InfraStack(app, 'TestStack');
-  
-  // WHEN
-  const template = Template.fromStack(stack);
-  
-  // THEN - Verify CloudFormation output exists
-  template.hasOutput('ImageMetadataTableArn', {
-    Description: 'ARN of the DynamoDB table storing image metadata and AI labels',
-    Export: {
-      Name: 'ImageMetadataTableArn',
-    },
-  });
-});
-
-/**
  * Test to verify DynamoDB Table is exposed as a public property.
  * This ensures other constructs can reference the table for IAM permissions
  * and data access operations.

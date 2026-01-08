@@ -108,48 +108,6 @@ test('ImageProcessor Lambda Function uses the base Lambda execution role', () =>
 });
 
 /**
- * Test to verify ImageProcessor Lambda Function name is exported as CloudFormation output.
- * This output is used for manual testing and monitoring.
- */
-test('ImageProcessor Lambda Function name is exported as CloudFormation output', () => {
-  // GIVEN
-  const app = new cdk.App();
-  const stack = new Infra.InfraStack(app, 'TestStack');
-  
-  // WHEN
-  const template = Template.fromStack(stack);
-  
-  // THEN - Verify CloudFormation output exists
-  template.hasOutput('ImageProcessorFunctionName', {
-    Description: 'Name of the ImageProcessor Lambda function',
-    Export: {
-      Name: 'ImageProcessorFunctionName',
-    },
-  });
-});
-
-/**
- * Test to verify ImageProcessor Lambda Function ARN is exported as CloudFormation output.
- * This output is used for cross-stack references and IAM policies.
- */
-test('ImageProcessor Lambda Function ARN is exported as CloudFormation output', () => {
-  // GIVEN
-  const app = new cdk.App();
-  const stack = new Infra.InfraStack(app, 'TestStack');
-  
-  // WHEN
-  const template = Template.fromStack(stack);
-  
-  // THEN - Verify CloudFormation output exists
-  template.hasOutput('ImageProcessorFunctionArn', {
-    Description: 'ARN of the ImageProcessor Lambda function',
-    Export: {
-      Name: 'ImageProcessorFunctionArn',
-    },
-  });
-});
-
-/**
  * Test to verify ImageProcessor Lambda Function is exposed as a public property.
  * This ensures other constructs can reference the function.
  */

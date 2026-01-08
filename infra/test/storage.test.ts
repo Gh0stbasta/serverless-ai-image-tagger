@@ -151,49 +151,6 @@ test('S3 Upload Bucket has versioning disabled for MVP', () => {
 });
 
 /**
- * Test to verify S3 Upload Bucket name is exported as CloudFormation output.
- * This output is used by the frontend to construct presigned URL requests
- * and by Lambda functions to reference the bucket.
- */
-test('S3 Upload Bucket name is exported as CloudFormation output', () => {
-  // GIVEN
-  const app = new cdk.App();
-  const stack = new Infra.InfraStack(app, 'TestStack');
-  
-  // WHEN
-  const template = Template.fromStack(stack);
-  
-  // THEN - Verify CloudFormation output exists
-  template.hasOutput('UploadBucketName', {
-    Description: 'Name of the S3 bucket for image uploads',
-    Export: {
-      Name: 'ImageUploadBucketName',
-    },
-  });
-});
-
-/**
- * Test to verify S3 Upload Bucket ARN is exported as CloudFormation output.
- * This output is used for IAM policy references and cross-stack dependencies.
- */
-test('S3 Upload Bucket ARN is exported as CloudFormation output', () => {
-  // GIVEN
-  const app = new cdk.App();
-  const stack = new Infra.InfraStack(app, 'TestStack');
-  
-  // WHEN
-  const template = Template.fromStack(stack);
-  
-  // THEN - Verify CloudFormation output exists
-  template.hasOutput('UploadBucketArn', {
-    Description: 'ARN of the S3 bucket for image uploads',
-    Export: {
-      Name: 'ImageUploadBucketArn',
-    },
-  });
-});
-
-/**
  * Test to verify S3 Upload Bucket is exposed as a public property.
  * This ensures other constructs can reference the bucket for generating
  * presigned URLs, setting up event notifications, or granting IAM permissions.

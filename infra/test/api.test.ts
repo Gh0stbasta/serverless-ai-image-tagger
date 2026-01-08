@@ -47,48 +47,6 @@ test('HTTP API has correct CORS configuration with GET, POST, PUT methods', () =
 });
 
 /**
- * Test to verify HTTP API has a public URL output.
- * This output is used by the frontend to make API calls.
- */
-test('HTTP API URL is exported as CloudFormation output', () => {
-  // GIVEN
-  const app = new cdk.App();
-  const stack = new Infra.InfraStack(app, 'TestStack');
-  
-  // WHEN
-  const template = Template.fromStack(stack);
-  
-  // THEN - Verify CloudFormation output exists
-  template.hasOutput('HttpApiUrl', {
-    Description: 'URL of the HTTP API Gateway for accessing image metadata',
-    Export: {
-      Name: 'HttpApiUrl',
-    },
-  });
-});
-
-/**
- * Test to verify HTTP API ID is exported as CloudFormation output.
- * This output can be used for cross-stack references and monitoring.
- */
-test('HTTP API ID is exported as CloudFormation output', () => {
-  // GIVEN
-  const app = new cdk.App();
-  const stack = new Infra.InfraStack(app, 'TestStack');
-  
-  // WHEN
-  const template = Template.fromStack(stack);
-  
-  // THEN - Verify CloudFormation output exists
-  template.hasOutput('HttpApiId', {
-    Description: 'ID of the HTTP API Gateway',
-    Export: {
-      Name: 'HttpApiId',
-    },
-  });
-});
-
-/**
  * Test to verify HTTP API is exposed as a public property.
  * This ensures other constructs can reference the API.
  */
