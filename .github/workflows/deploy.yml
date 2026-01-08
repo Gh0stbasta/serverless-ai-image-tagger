@@ -54,7 +54,7 @@ jobs:
       - name: Deploy with CDK
         run: |
           cd infra
-          npx cdk deploy --require-approval never --all --outputs-file /tmp/outputs.json --no-outputs --context notificationEmail=${{ secrets.NOTIFICATION_EMAIL }}
+          npx cdk deploy --require-approval never --all --no-outputs --context notificationEmail=${{ secrets.NOTIFICATION_EMAIL }}
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: ${{ vars.AWS_REGION || 'eu-central-1' }}
