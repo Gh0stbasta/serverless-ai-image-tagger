@@ -1,24 +1,6 @@
 import { useState, useEffect } from 'react'
+import type { ImageItem } from './types'
 import './Gallery.css'
-
-/**
- * Label interface matching the backend response structure
- */
-interface Label {
-  name: string;
-  confidence: number;
-}
-
-/**
- * ImageMetadata interface matching the DynamoDB schema
- * from the get-images Lambda function
- */
-interface ImageMetadata {
-  imageId: string;
-  s3Url: string;
-  labels: Label[];
-  timestamp: string;
-}
 
 /**
  * Gallery Component Props
@@ -45,7 +27,7 @@ interface GalleryProps {
  * @param apiUrl - The base URL of the API Gateway endpoint
  */
 function Gallery({ apiUrl }: GalleryProps) {
-  const [images, setImages] = useState<ImageMetadata[]>([])
+  const [images, setImages] = useState<ImageItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -67,7 +49,7 @@ function Gallery({ apiUrl }: GalleryProps) {
           throw new Error(`Failed to fetch images: ${response.status} ${response.statusText}`)
         }
 
-        const data: ImageMetadata[] = await response.json()
+        const data: ImageItem[] = await response.json()
         setImages(data)
       } catch (err) {
         console.error('Error fetching images:', err)
