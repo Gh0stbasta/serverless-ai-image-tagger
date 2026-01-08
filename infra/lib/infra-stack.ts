@@ -129,12 +129,17 @@ export class InfraStack extends cdk.Stack {
      * configuration following ADR-005. This promotes separation of concerns and
      * makes the storage layer independently testable and reusable.
      * 
+     * The StorageConstruct now includes a CloudFront distribution for serving
+     * uploaded images, ensuring images are accessible via HTTPS while maintaining
+     * S3 bucket security (no public access).
+     * 
      * Note: Using 'Upload' as the construct ID with 'Bucket' as the resource ID
      * to preserve the CloudFormation Logical ID 'UploadBucket' and avoid resource
      * replacement during the refactoring.
      */
     const storage = new StorageConstruct(this, 'Upload');
     this.uploadBucket = storage.uploadBucket;
+    this.imageDistribution = storage.imageDistribution;
 
     /**
      * Database Layer: DynamoDB Table for image metadata.
@@ -159,6 +164,7 @@ export class InfraStack extends cdk.Stack {
      * - Lambda function configuration
      * - IAM permissions for S3 read and DynamoDB write
      * - S3 event notification to trigger the Lambda on image uploads
+     * - CloudFront domain for generating public image URLs
      * 
      * This follows the Single Responsibility Principle by keeping all processing
      * logic encapsulated within the ProcessingConstruct.
@@ -171,6 +177,7 @@ export class InfraStack extends cdk.Stack {
       bucket: storage.uploadBucket,
       table: database.table,
       executionRole: lambdaExecutionRole,
+      cloudFrontDomain: storage.imageDistribution.distributionDomainName,
     });
     this.imageProcessorFunction = processing.imageProcessorFunction;
 
@@ -214,6 +221,19 @@ export class InfraStack extends cdk.Stack {
       value: storage.uploadBucket.bucketArn,
       description: 'ARN of the S3 bucket for image uploads',
       exportName: 'ImageUploadBucketArn',
+    });
+
+    // CloudFront Distribution for Images Output
+    new cdk.CfnOutput(this, 'ImageDistributionUrl', {
+      value: `https://${storage.imageDistribution.distributionDomainName}`,
+      description: 'CloudFront URL for accessing uploaded images',
+      exportName: 'ImageDistributionUrl',
+    });
+
+    new cdk.CfnOutput(this, 'ImageDistributionId', {
+      value: storage.imageDistribution.distributionId,
+      description: 'ID of the CloudFront distribution for images',
+      exportName: 'ImageDistributionId',
     });
 
     // DynamoDB Table Outputs
@@ -361,6 +381,15 @@ export class InfraStack extends cdk.Stack {
    * - Granting IAM permissions to Lambda functions
    */
   public readonly uploadBucket: s3.Bucket;
+
+  /**
+   * Public property to expose the CloudFront distribution for uploaded images.
+   * This enables other constructs to reference the distribution for:
+   * - Generating public image URLs
+   * - Cache invalidation if needed
+   * - Custom domain configuration
+   */
+  public readonly imageDistribution: cloudfront.Distribution;
 
   /**
    * Public property to expose the DynamoDB table for image metadata.
