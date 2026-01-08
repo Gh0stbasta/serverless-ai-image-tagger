@@ -102,4 +102,4 @@ This architecture is designed to stay within the **AWS Free Tier** for developme
 * **AI (Rekognition):** Free Tier includes 1,000 images / month (First 12 months).
 * **Storage (S3):** Standard rates apply after Free Tier (approx. $0.023/GB).
 
-**Protection:** A `Budget Alarm` is configured to notify admins via SNS if costs exceed $5.00/month
+**Protection:** A `Budget Alarm` is configured to notify admins via SNS if costs exceed $5.00/month.
