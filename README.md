@@ -67,7 +67,7 @@ The system is built on an **asynchronous, event-driven** architecture where each
 graph LR
     User([👤 User]) -->|1. Upload| S3[📦 S3 Bucket]
     S3 -->|2. Trigger| Lambda[⚡ Lambda Processor]
-    Lambda -->|3. Analyse| Rekognition[🤖 Rekognition AI]
+    Lambda -->|3. Analyze| Rekognition[🤖 Rekognition AI]
     Lambda -->|4. Store| DynamoDB[(🗄️ DynamoDB)]
     User -->|5. Query| API[🌐 API Gateway]
     API -->|6. Fetch| DynamoDB
