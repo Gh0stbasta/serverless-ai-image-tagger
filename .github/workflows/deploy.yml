@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   deploy:
-    name: Deploy Full Stack
+    name: Test and Deploy Full Stack
     runs-on: ubuntu-latest
 
     steps:
@@ -23,11 +23,19 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          # Wir zeigen auf infra, damit der Cache-Check nicht fehlschlägt
           cache-dependency-path: |
             infra/package-lock.json
             backend/package-lock.json
             frontend/package-lock.json
+
+      - name: Install all dependencies
+        run: npm run install-all
+
+      - name: Run all tests (Monorepo)
+        run: npm run test
+
+      - name: Build Frontend
+        run: npm run build --prefix frontend
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -35,14 +43,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'eu-central-1' }}
           role-session-name: GitHubActions-Deploy
-
-      # Nutze dein zentrales Script aus dem Root
-      - name: Install all dependencies
-        run: npm run install-all
-
-      # Optional: Frontend Build (notwendig für das spätere Hosting Issue #32)
-      - name: Build Frontend
-        run: npm run build --prefix frontend
 
       - name: Deploy with CDK
         run: |
