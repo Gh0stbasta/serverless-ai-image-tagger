@@ -1,0 +1,174 @@
+/* Professional Footer */
+.professional-footer {
+  margin-top: 3rem;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+/* Profile Section */
+.profile-section {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex: 1;
+  min-width: 280px;
+}
+
+.profile-picture {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--primary-pink);
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.credentials-title {
+  font-size: 1.25rem;
+  margin: 0 0 0.25rem 0;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.profile-role {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+/* Credentials Section */
+.credentials-section {
+  flex: 1;
+  min-width: 280px;
+}
+
+.certifications {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cert-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  transition: border-color 0.2s;
+}
+
+.cert-badge:hover {
+  border-color: rgba(255, 0, 128, 0.3);
+}
+
+.cert-badge-img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.cert-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.cert-badge.aws {
+  border-left: 3px solid #ff9900;
+}
+
+.cert-badge.psm {
+  border-left: 3px solid var(--primary-blue);
+}
+
+/* Social Section */
+.social-section {
+  display: flex;
+  align-items: center;
+}
+
+.linkedin-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 2rem;
+  background: var(--gradient-primary);
+  color: white;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.linkedin-link:hover {
+  opacity: 0.9;
+  color: white;
+}
+
+.linkedin-icon {
+  font-size: 1.25rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .professional-footer {
+    padding: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .footer-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profile-section {
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .profile-picture {
+    width: 100px;
+    height: 100px;
+  }
+
+  .credentials-section {
+    width: 100%;
+  }
+
+  .credentials-title {
+    font-size: 1.1rem;
+  }
+
+  .certifications {
+    align-items: stretch;
+  }
+
+  .social-section {
+    width: 100%;
+  }
+
+  .linkedin-link {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -16,7 +16,7 @@
 .app-header h1 {
   font-size: 2.5rem;
   margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--gradient-primary);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -38,9 +38,9 @@
 .upload-section {
   text-align: center;
   padding: 2rem;
-  background-color: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 12px;
-  border: 2px dashed rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 0, 128, 0.2);
 }
 
 .upload-button {
@@ -49,15 +49,14 @@
   font-weight: 600;
   border-radius: 8px;
   border: none;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--gradient-primary);
   color: white;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: opacity 0.2s;
 }
 
 .upload-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+  opacity: 0.9;
 }
 
 .upload-button:disabled {
