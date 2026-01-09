@@ -596,5 +596,41 @@ describe('App Component', () => {
         expect(h2Elements.length).toBeGreaterThan(0)
       })
     })
+
+    it('information sections are in correct DOM order for screen readers', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => [],
+      })
+
+      const { container } = render(<App />)
+      
+      await waitFor(() => {
+        expect(screen.getByText('Why This Project?')).toBeInTheDocument()
+      })
+
+      // Get all the main sections in DOM order
+      const main = container.querySelector('main')
+      expect(main).toBeInTheDocument()
+      
+      const sections = main?.children
+      expect(sections).toBeDefined()
+      
+      // Verify order: InfoBox -> ProjectDepth -> ProfessionalFooter -> Upload -> Gallery
+      // InfoBox should be first (contains "Why This Project?")
+      expect(sections?.[0]).toHaveTextContent('Why This Project?')
+      
+      // ProjectDepth should be second (contains "Technical Depth")
+      expect(sections?.[1]).toHaveTextContent('Technical Depth')
+      
+      // ProfessionalFooter should be third (contains "Stefan Schmidpeter")
+      expect(sections?.[2]).toHaveTextContent('Stefan Schmidpeter')
+      
+      // Upload section should be fourth (contains "Upload Image" button)
+      expect(sections?.[3]).toHaveClass('upload-section')
+      
+      // Gallery should be last
+      expect(sections?.[4]).toHaveTextContent('Your Images')
+    })
   })
 })

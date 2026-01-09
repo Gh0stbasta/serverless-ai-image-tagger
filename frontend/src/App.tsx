@@ -77,6 +77,8 @@ function App() {
         
         <ProjectDepth />
         
+        <ProfessionalFooter />
+        
         <section className="upload-section">
           <input
             ref={fileInputRef}
@@ -98,8 +100,6 @@ function App() {
         </section>
 
         <Gallery key={galleryKey} apiUrl={apiUrl} />
-        
-        <ProfessionalFooter />
       </main>
     </div>
   )
