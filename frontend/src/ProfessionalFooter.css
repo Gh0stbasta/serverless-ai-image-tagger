@@ -1,0 +1,139 @@
+/* Professional Footer */
+.professional-footer {
+  margin-top: 3rem;
+  padding: 2rem;
+  background: var(--gradient-secondary);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 0, 128, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+/* Credentials Section */
+.credentials-section {
+  flex: 1;
+  min-width: 250px;
+}
+
+.credentials-title {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.certifications {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cert-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 0, 128, 0.3);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.cert-badge:hover {
+  transform: translateX(5px);
+  border-color: rgba(0, 212, 255, 0.5);
+  box-shadow: 0 4px 15px rgba(255, 0, 128, 0.2);
+}
+
+.cert-badge.aws {
+  border-left: 4px solid #ff9900;
+}
+
+.cert-badge.psm {
+  border-left: 4px solid var(--primary-blue);
+}
+
+.cert-icon {
+  font-size: 1.25rem;
+}
+
+/* Social Section */
+.social-section {
+  display: flex;
+  align-items: center;
+}
+
+.linkedin-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 2rem;
+  background: var(--gradient-primary);
+  color: white;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 1.05rem;
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 15px rgba(255, 0, 128, 0.4);
+}
+
+.linkedin-link:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(255, 0, 128, 0.6), 0 0 20px rgba(0, 212, 255, 0.4);
+  color: white;
+}
+
+.linkedin-icon {
+  font-size: 1.5rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .professional-footer {
+    padding: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .credentials-section {
+    width: 100%;
+  }
+
+  .credentials-title {
+    font-size: 1.1rem;
+  }
+
+  .certifications {
+    align-items: stretch;
+  }
+
+  .cert-badge {
+    justify-content: center;
+  }
+
+  .social-section {
+    width: 100%;
+  }
+
+  .linkedin-link {
+    width: 100%;
+    justify-content: center;
+  }
+}

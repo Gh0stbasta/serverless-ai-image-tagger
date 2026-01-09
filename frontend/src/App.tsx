@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react'
 import Gallery from './Gallery'
 import InfoBox from './InfoBox'
+import ProjectDepth from './ProjectDepth'
+import ProfessionalFooter from './ProfessionalFooter'
 import { getPresignedUrl, uploadImageToS3 } from './services/apiService'
 import './App.css'
 
@@ -73,6 +75,8 @@ function App() {
       <main className="app-main">
         <InfoBox />
         
+        <ProjectDepth />
+        
         <section className="upload-section">
           <input
             ref={fileInputRef}
@@ -94,6 +98,8 @@ function App() {
         </section>
 
         <Gallery key={galleryKey} apiUrl={apiUrl} />
+        
+        <ProfessionalFooter />
       </main>
     </div>
   )
