@@ -20,7 +20,6 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  text-shadow: 0 0 30px rgba(255, 0, 128, 0.5);
 }
 
 .app-subtitle {
@@ -39,10 +38,9 @@
 .upload-section {
   text-align: center;
   padding: 2rem;
-  background: var(--gradient-secondary);
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 12px;
-  border: 2px dashed rgba(255, 0, 128, 0.3);
-  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 0, 128, 0.2);
 }
 
 .upload-button {
@@ -54,13 +52,11 @@
   background: var(--gradient-primary);
   color: white;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 15px rgba(255, 0, 128, 0.4);
+  transition: opacity 0.2s;
 }
 
 .upload-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 30px rgba(255, 0, 128, 0.6), 0 0 20px rgba(0, 212, 255, 0.4);
+  opacity: 0.9;
 }
 
 .upload-button:disabled {

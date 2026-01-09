@@ -42,10 +42,6 @@ function ProjectDepth() {
           <span className="depth-badge">AWS CDK</span>
           <p>Infrastructure as Code via <strong>AWS CDK</strong> for reproducible and version-controlled deployments.</p>
         </div>
-        <div className="depth-item">
-          <span className="depth-badge">CI/CD</span>
-          <p>Fully automated <strong>CI/CD pipeline</strong> with GitHub Actions for continuous deployment.</p>
-        </div>
       </div>
     </section>
   )

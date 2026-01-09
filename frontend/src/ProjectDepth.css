@@ -1,11 +1,10 @@
 /* Project Depth Section */
 .project-depth {
   padding: 1.5rem;
-  background: var(--gradient-secondary);
-  border-radius: 16px;
-  border: 1px solid rgba(0, 212, 255, 0.3);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 212, 255, 0.2);
   margin-bottom: 2rem;
-  backdrop-filter: blur(10px);
 }
 
 .depth-header {
@@ -36,13 +35,11 @@
   border-radius: 8px;
   font-weight: 600;
   text-decoration: none;
-  transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 15px rgba(255, 0, 128, 0.4);
+  transition: opacity 0.2s;
 }
 
 .github-link:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(255, 0, 128, 0.6), 0 0 20px rgba(0, 212, 255, 0.4);
+  opacity: 0.9;
   color: white;
 }
 
@@ -60,14 +57,13 @@
 .depth-item {
   background-color: rgba(255, 255, 255, 0.05);
   padding: 1rem;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 0, 128, 0.2);
-  transition: transform 0.2s, border-color 0.2s;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: border-color 0.2s;
 }
 
 .depth-item:hover {
-  transform: translateY(-2px);
-  border-color: rgba(0, 212, 255, 0.4);
+  border-color: rgba(0, 212, 255, 0.3);
 }
 
 .depth-badge {
