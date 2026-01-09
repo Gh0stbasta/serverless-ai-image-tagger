@@ -71,6 +71,7 @@ function App() {
         <h1>AI Image Tagger</h1>
         <p className="app-subtitle">Serverless Image Analysis with AWS Rekognition</p>
         <p className="app-subtitle">Refresh Site after Image-upload</p>
+        <p className="app-subtitle">Don't worry. You can safely delete your image after uploading.</p>
       </header>
 
       <main className="app-main">
@@ -107,4 +108,5 @@ function App() {
 }
 
 export default App
+
 
