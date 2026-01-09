@@ -100,7 +100,7 @@
   }
 
   .github-link {
-    width: 100%;
+    align-self: stretch;
     justify-content: center;
   }
 

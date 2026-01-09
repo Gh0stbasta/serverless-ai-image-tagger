@@ -73,12 +73,6 @@ function App() {
       </header>
 
       <main className="app-main">
-        <InfoBox />
-        
-        <ProjectDepth />
-        
-        <ProfessionalFooter />
-        
         <section className="upload-section">
           <input
             ref={fileInputRef}
@@ -100,6 +94,12 @@ function App() {
         </section>
 
         <Gallery key={galleryKey} apiUrl={apiUrl} />
+        
+        <InfoBox />
+        
+        <ProjectDepth />
+        
+        <ProfessionalFooter />
       </main>
     </div>
   )

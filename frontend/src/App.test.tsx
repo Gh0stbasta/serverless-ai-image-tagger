@@ -616,21 +616,21 @@ describe('App Component', () => {
       const sections = main?.children
       expect(sections).toBeDefined()
       
-      // Verify order: InfoBox -> ProjectDepth -> ProfessionalFooter -> Upload -> Gallery
-      // InfoBox should be first (contains "Why This Project?")
-      expect(sections?.[0]).toHaveTextContent('Why This Project?')
+      // Verify order: Upload -> Gallery -> InfoBox -> ProjectDepth -> ProfessionalFooter
+      // Upload section should be first (contains "Upload Image" button)
+      expect(sections?.[0]).toHaveClass('upload-section')
       
-      // ProjectDepth should be second (contains "Technical Depth")
-      expect(sections?.[1]).toHaveTextContent('Technical Depth')
+      // Gallery should be second
+      expect(sections?.[1]).toHaveTextContent('Your Images')
       
-      // ProfessionalFooter should be third (contains "Stefan Schmidpeter")
-      expect(sections?.[2]).toHaveTextContent('Stefan Schmidpeter')
+      // InfoBox should be third (contains "Why This Project?")
+      expect(sections?.[2]).toHaveTextContent('Why This Project?')
       
-      // Upload section should be fourth (contains "Upload Image" button)
-      expect(sections?.[3]).toHaveClass('upload-section')
+      // ProjectDepth should be fourth (contains "Technical Depth")
+      expect(sections?.[3]).toHaveTextContent('Technical Depth')
       
-      // Gallery should be last
-      expect(sections?.[4]).toHaveTextContent('Your Images')
+      // ProfessionalFooter should be last (contains "Stefan Schmidpeter")
+      expect(sections?.[4]).toHaveTextContent('Stefan Schmidpeter')
     })
   })
 })
