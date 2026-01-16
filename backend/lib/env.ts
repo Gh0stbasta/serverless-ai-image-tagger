@@ -30,7 +30,7 @@ export function getEnvCloudFrontDomain(): string {
  * @returns Maximum number of labels for Rekognition
  */
 export function getEnvRekognitionMaxLabels(defaultValue = 10): number {
-  return getEnvIntVar('REKOGNITION_MAX_LABELS', parseInt, defaultValue);
+  return getEnvNumberVar('REKOGNITION_MAX_LABELS', parseInt, defaultValue);
 }
 
 /**
@@ -38,7 +38,7 @@ export function getEnvRekognitionMaxLabels(defaultValue = 10): number {
  * @returns Minimum confidence for Rekognition
  */
 export function getEnvRekognitionMinConfidence(defaultValue = 70): number {
-  return getEnvIntVar('REKOGNITION_MIN_CONFIDENCE', parseFloat, defaultValue);
+  return getEnvNumberVar('REKOGNITION_MIN_CONFIDENCE', parseFloat, defaultValue);
 }
 
 /**
@@ -56,15 +56,15 @@ function getEnvStringVar(varName: string): string {
 }
 
 /**
- * Helper function to retrieve and validate integer environment variables
+ * Helper function to retrieve and validate number environment variables
  * @param varName Name of the environment variable
- * @param parser Function to parse the string value to an integer
+ * @param parser Function to parse the string value to a number
  * @param defaultValue Optional default value if the environment variable is not set
- * @returns Integer value of the environment variable
+ * @returns Number value of the environment variable
  * @throws Error if no default value is provided and the environment variable 
  *          is not set or not a valid integer
  */
-function getEnvIntVar(
+function getEnvNumberVar(
   varName: string,
   parser: (value: string, radix?: number) => number,
   defaultValue?: number

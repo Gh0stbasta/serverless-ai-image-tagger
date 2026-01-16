@@ -1,6 +1,8 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { createErrorResponse, createSuccessResponse, getEnvBucketName } from 'lib';
+import { PresignedUrlResponse } from 'interfaces';
 
 /**
  * S3 Client
@@ -14,17 +16,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
  */
 const s3Client = new S3Client({});
 
-/**
- * PresignedUrlResponse Interface
- * 
- * Architectural Decision: Defining a strict TypeScript interface for the API response
- * ensures type safety and makes the expected response structure explicit for consumers.
- */
-interface PresignedUrlResponse {
-  uploadUrl: string;
-  key: string;
-  expiresIn: number;
-}
+
 
 /**
  * GeneratePresignedUrl Lambda Function Handler
@@ -69,26 +61,11 @@ export const handler = async (
   console.log('Lambda Context', JSON.stringify(context, null, 2));
 
   try {
-    /**
-     * Environment Variable Validation
-     * 
-     * Architectural Decision: Fail fast if required environment variables are not set.
-     * This prevents unexpected runtime errors and provides clear feedback during deployment.
-     */
-    const bucketName = process.env.BUCKET_NAME;
-    if (!bucketName) {
-      console.error('BUCKET_NAME environment variable is not set');
-      return {
-        statusCode: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({
-          error: 'Internal server error',
-          message: 'BUCKET_NAME environment variable is not set',
-        }),
-      };
+    let bucketName: string;
+    try {
+      bucketName = getEnvBucketName();
+    } catch (e) {
+      return createErrorResponse(500, e);
     }
 
     /**
@@ -168,49 +145,8 @@ export const handler = async (
       expiresIn,
     };
 
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        /**
-         * CORS Headers
-         * 
-         * Architectural Decision: Allow cross-origin requests from any origin (*).
-         * This is acceptable for a presigned URL generation endpoint.
-         * 
-         * For production, consider:
-         * - Restricting to specific origins: 'https://yourdomain.com'
-         * - Adding authentication to prevent unauthorized URL generation
-         */
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify(response),
-    };
+    return createSuccessResponse(response);
   } catch (error) {
-    /**
-     * Error Handling
-     * 
-     * Architectural Decision: Log errors to CloudWatch for monitoring and return
-     * a generic error message to the client to avoid exposing internal details.
-     * 
-     * The 500 status code indicates a server-side error, prompting the frontend
-     * to display an appropriate error message to the user.
-     */
-    console.error('Error generating presigned URL:', error);
-    console.error('Error details:', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-
-    return {
-      statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({
-        error: 'Internal server error',
-        message: 'Failed to generate upload URL',
-      }),
-    };
+    return createErrorResponse(500, 'Failed to generate upload URL', error);
   }
 };

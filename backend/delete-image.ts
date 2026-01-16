@@ -2,6 +2,7 @@ import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-la
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, DeleteCommand } from '@aws-sdk/lib-dynamodb';
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { createErrorResponse, createSuccessResponse, getEnvBucketName, getEnvTableName } from 'lib';
 
 /**
  * AWS SDK Clients
@@ -69,61 +70,21 @@ export const handler = async (
      */
     const imageId = event.pathParameters?.imageId;
     if (!imageId) {
-      console.error('Missing imageId in path parameters');
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({
-          error: 'Bad Request',
-          message: 'imageId is required in path parameters',
-        }),
-      };
+      return createErrorResponse(400, 'imageId is required in path parameters');
     }
 
     // URL decode the imageId to handle special characters
     const decodedImageId = decodeURIComponent(imageId);
     console.log(`Deleting image: ${decodedImageId}`);
 
-    /**
-     * Environment Variable Validation
-     * 
-     * Architectural Decision: Fail fast if required environment variables are not set.
-     * This prevents unexpected runtime errors and provides clear feedback during deployment.
-     */
-    const bucketName = process.env.BUCKET_NAME;
-    const tableName = process.env.TABLE_NAME;
+    let bucketName: string
+    let tableName: string;
+    try {
+      bucketName = getEnvBucketName();
+      tableName = getEnvTableName();
+    } catch (error) {
+      return createErrorResponse(500, error);
 
-    if (!bucketName) {
-      console.error('BUCKET_NAME environment variable is not set');
-      return {
-        statusCode: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({
-          error: 'Internal server error',
-          message: 'BUCKET_NAME environment variable is not set',
-        }),
-      };
-    }
-
-    if (!tableName) {
-      console.error('TABLE_NAME environment variable is not set');
-      return {
-        statusCode: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({
-          error: 'Internal server error',
-          message: 'TABLE_NAME environment variable is not set',
-        }),
-      };
     }
 
     /**
@@ -137,7 +98,7 @@ export const handler = async (
      * 204 status. We don't check if the object exists first to save an API call.
      */
     console.log(`Deleting S3 object: s3://${bucketName}/${decodedImageId}`);
-    
+
     const deleteObjectCommand = new DeleteObjectCommand({
       Bucket: bucketName,
       Key: decodedImageId,
@@ -156,7 +117,7 @@ export const handler = async (
      * DynamoDB DeleteCommand is also idempotent - deleting a non-existent item succeeds.
      */
     console.log(`Deleting DynamoDB item: ${decodedImageId}`);
-    
+
     const deleteCommand = new DeleteCommand({
       TableName: tableName,
       Key: {
@@ -176,37 +137,8 @@ export const handler = async (
      * 
      * CORS headers allow frontend access from any origin (configure based on requirements).
      */
-    return {
-      statusCode: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-      },
-    };
+    return createSuccessResponse();
   } catch (error) {
-    /**
-     * Error Handling
-     * 
-     * Architectural Decision: Log errors to CloudWatch for monitoring and return
-     * a generic error message to the client to avoid exposing internal details.
-     * 
-     * The 500 status code indicates a server-side error, prompting the frontend
-     * to display an appropriate error message to the user.
-     */
-    console.error('Error deleting image:', error);
-    console.error('Error details:', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-
-    return {
-      statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({
-        error: 'Internal server error',
-        message: 'Failed to delete image',
-      }),
-    };
+    return createErrorResponse(500, 'Failed to delete image', error);
   }
 };
