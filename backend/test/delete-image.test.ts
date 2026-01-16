@@ -236,12 +236,12 @@ describe('DeleteImage Lambda Handler', () => {
     
     const body = JSON.parse(response.body as string);
     expect(body).toEqual({
-      error: 'Bad Request',
+      error: 'Bad request',
       message: 'imageId is required in path parameters',
     });
-    
-    expect(consoleErrorSpy).toHaveBeenCalledWith('Missing imageId in path parameters');
-    
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith('imageId is required in path parameters');
+
     // Verify no AWS SDK calls were made
     expect(s3Mock.calls()).toHaveLength(0);
     expect(dynamoDbMock.calls()).toHaveLength(0);
@@ -340,9 +340,9 @@ describe('DeleteImage Lambda Handler', () => {
       error: 'Internal server error',
       message: 'Failed to delete image',
     });
-    
-    expect(consoleErrorSpy).toHaveBeenCalledWith('Error deleting image:', error);
-    
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to delete image:', error);
+
     // Verify S3 delete was called but DynamoDB delete was not (failed before reaching it)
     expect(s3Mock.calls()).toHaveLength(1);
     expect(dynamoDbMock.calls()).toHaveLength(0);
@@ -377,9 +377,9 @@ describe('DeleteImage Lambda Handler', () => {
       error: 'Internal server error',
       message: 'Failed to delete image',
     });
-    
-    expect(consoleErrorSpy).toHaveBeenCalledWith('Error deleting image:', error);
-    
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to delete image:', error);
+
     // Verify both S3 and DynamoDB delete were called
     expect(s3Mock.calls()).toHaveLength(1);
     expect(dynamoDbMock.calls()).toHaveLength(1);
