@@ -289,11 +289,8 @@ describe('GetImages Lambda Handler', () => {
       error: 'Internal server error',
       message: 'Failed to retrieve images from database',
     });
-    
-    expect(consoleErrorSpy).toHaveBeenCalledWith('Error scanning DynamoDB table:', error);
-    expect(consoleErrorSpy).toHaveBeenCalledWith('Error details:', {
-      error: 'ProvisionedThroughputExceededException: Request rate limit exceeded',
-    });
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to retrieve images from database:', error);
   });
 
   /**
@@ -317,8 +314,8 @@ describe('GetImages Lambda Handler', () => {
     const body = JSON.parse(response.body as string);
     expect(body.error).toBe('Internal server error');
     expect(body.message).toBe('Failed to retrieve images from database');
-    
-    expect(consoleErrorSpy).toHaveBeenCalledWith('Error scanning DynamoDB table:', error);
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to retrieve images from database:', error);
   });
 
   /**

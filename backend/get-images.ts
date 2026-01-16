@@ -1,6 +1,8 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { createErrorResponse, createSuccessResponse, getEnvTableName } from 'lib';
+import { ImageMetadata, isImageMetadataArray } from 'interfaces';
 
 /**
  * DynamoDB Document Client
@@ -17,23 +19,6 @@ import { DynamoDBDocumentClient, ScanCommand } from '@aws-sdk/lib-dynamodb';
  */
 const ddbClient = new DynamoDBClient({});
 const dynamoDbClient = DynamoDBDocumentClient.from(ddbClient);
-
-/**
- * ImageMetadata Interface
- * 
- * Architectural Decision: Defining a strict TypeScript interface for DynamoDB items
- * ensures type safety and makes the expected data structure explicit for consumers.
- * This interface matches the schema defined by the ImageProcessor Lambda.
- */
-interface ImageMetadata {
-  imageId: string;
-  s3Url: string;
-  labels: Array<{
-    name: string;
-    confidence: number;
-  }>;
-  timestamp: string;
-}
 
 /**
  * GetImages Lambda Function Handler
@@ -75,26 +60,12 @@ export const handler = async (
   console.log('Lambda Context', JSON.stringify(context, null, 2));
 
   try {
-    /**
-     * Environment Variable Validation
-     * 
-     * Architectural Decision: Fail fast if required environment variables are not set.
-     * This prevents unexpected runtime errors and provides clear feedback during deployment.
-     */
-    const tableName = process.env.TABLE_NAME;
-    if (!tableName) {
-      console.error('TABLE_NAME environment variable is not set');
-      return {
-        statusCode: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({
-          error: 'Internal server error',
-          message: 'TABLE_NAME environment variable is not set',
-        }),
-      };
+    let tableName: string;
+    try {
+      tableName = getEnvTableName();
+    } catch (error) {
+      return createErrorResponse(500, error);
+
     }
 
     console.log(`Scanning DynamoDB table: ${tableName}`);
@@ -121,62 +92,15 @@ export const handler = async (
 
     const response = await dynamoDbClient.send(scanCommand);
 
-    /**
-     * Response Formatting
-     * 
-     * Architectural Decision: Return items as-is from DynamoDB with minimal transformation.
-     * The DynamoDBDocumentClient automatically unmarshalls DynamoDB AttributeValues
-     * into native JavaScript objects, so no manual parsing is needed.
-     * 
-     * Empty array is returned if no items exist (rather than null) to provide
-     * consistent data structure for frontend consumers.
-     */
-    const items = (response.Items || []) as ImageMetadata[];
+    let items: ImageMetadata[] = [];
+    if (isImageMetadataArray(response.Items)) {
+      items = response.Items;
+    }
 
     console.log(`Successfully retrieved ${items.length} images from DynamoDB`);
 
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        /**
-         * CORS Headers
-         * 
-         * Architectural Decision: Allow cross-origin requests from any origin (*).
-         * This is acceptable for a public read-only API endpoint.
-         * 
-         * For production, consider restricting to specific origins:
-         * 'Access-Control-Allow-Origin': 'https://yourdomain.com'
-         */
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify(items),
-    };
+    return createSuccessResponse(items);
   } catch (error) {
-    /**
-     * Error Handling
-     * 
-     * Architectural Decision: Log errors to CloudWatch for monitoring and return
-     * a generic error message to the client to avoid exposing internal details.
-     * 
-     * The 500 status code indicates a server-side error, prompting the frontend
-     * to display an appropriate error message to the user.
-     */
-    console.error('Error scanning DynamoDB table:', error);
-    console.error('Error details:', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-
-    return {
-      statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({
-        error: 'Internal server error',
-        message: 'Failed to retrieve images from database',
-      }),
-    };
+    return createErrorResponse(500, 'Failed to retrieve images from database', error);
   }
 };

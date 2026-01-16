@@ -2,6 +2,7 @@ import { S3Event, Context } from 'aws-lambda';
 import { RekognitionClient, DetectLabelsCommand, DetectLabelsCommandInput } from '@aws-sdk/client-rekognition';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { getEnvCloudFrontDomain, getEnvRekognitionMaxLabels, getEnvRekognitionMinConfidence, getEnvTableName } from 'lib';
 
 /**
  * Rekognition Client
@@ -90,8 +91,8 @@ export const handler = async (event: S3Event, context: Context): Promise<void> =
             Name: key,
           },
         },
-        MaxLabels: parseInt(process.env.REKOGNITION_MAX_LABELS || '10', 10),
-        MinConfidence: parseFloat(process.env.REKOGNITION_MIN_CONFIDENCE || '70'),
+        MaxLabels: getEnvRekognitionMaxLabels(),
+        MinConfidence: getEnvRekognitionMinConfidence(),
       };
 
       const command = new DetectLabelsCommand(input);
@@ -110,7 +111,7 @@ export const handler = async (event: S3Event, context: Context): Promise<void> =
        */
       if (response.Labels && response.Labels.length > 0) {
         console.log(`Detected ${response.Labels.length} labels for image: ${key}`);
-        
+
         response.Labels.forEach((label) => {
           console.log(
             JSON.stringify({
@@ -146,17 +147,8 @@ export const handler = async (event: S3Event, context: Context): Promise<void> =
        * Cost Impact: DynamoDB charges $1.25 per million write request units (WRUs).
        * Each PutCommand consumes 1 WRU per 1KB of data. Free tier includes 25 WRUs/month.
        */
-      const tableName = process.env.TABLE_NAME;
-      if (!tableName) {
-        console.error('TABLE_NAME environment variable is not set');
-        throw new Error('TABLE_NAME environment variable is not set');
-      }
-
-      const cloudFrontDomain = process.env.CLOUDFRONT_DOMAIN;
-      if (!cloudFrontDomain) {
-        console.error('CLOUDFRONT_DOMAIN environment variable is not set');
-        throw new Error('CLOUDFRONT_DOMAIN environment variable is not set');
-      }
+      const tableName = getEnvTableName();
+      const cloudFrontDomain = getEnvCloudFrontDomain();
 
       // Construct CloudFront URL: https://{cloudfront-domain}/{object-key}
       const s3Url = `https://${cloudFrontDomain}/${encodeURIComponent(key)}`;
@@ -173,7 +165,7 @@ export const handler = async (event: S3Event, context: Context): Promise<void> =
       };
 
       console.log(`Storing metadata in DynamoDB for image: ${key}`);
-      
+
       const putCommand = new PutCommand({
         TableName: tableName,
         Item: item,
